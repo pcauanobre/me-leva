@@ -21,3 +21,7 @@ next-env.d.ts
 story-test.html
 story-place-holder.cdr
 story-place-holder.png
+
+# claude code
+.claude/
+.planning/
