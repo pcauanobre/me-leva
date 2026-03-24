@@ -278,7 +278,7 @@ export default async function ReviewSubmissionPage({
                   },
                   {
                     label: "Porte",
-                    value: SIZE_LABELS[animal.size] ?? animal.size ?? "Não informado",
+                    value: animal.size ? (SIZE_LABELS[animal.size] ?? animal.size) : "Não informado",
                   },
                   {
                     label: "Sexo",
