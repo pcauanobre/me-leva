@@ -1,154 +1,126 @@
-<!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
 **Me Leva**
 
-Plataforma web de adocao de animais para uma protetora independente em Fortaleza. Funciona como um catalogo publico de pets disponiveis, com painel administrativo privado para gerenciar cadastros, fotos e formularios de interesse recebidos. Substitui a divulgacao fragmentada via Instagram por um canal proprio e organizado.
+Plataforma web (responsiva para desktop e mobile) de adocao de animais para uma protetora independente em Fortaleza. Funciona como um catalogo publico de pets disponiveis, com painel administrativo privado para gerenciar cadastros, fotos e formularios de interesse recebidos. Usuarios podem se registrar e submeter animais para aprovacao. Substitui a divulgacao fragmentada via Instagram por um canal proprio e organizado.
 
 **Core Value:** Conectar animais resgatados a adotantes de forma organizada, com autonomia total da protetora — sem depender de redes sociais.
 
 ### Constraints
 
-- **Stack**: Next.js + Supabase (PostgreSQL, Auth, Storage) + Vercel — decisao da equipe
+- **Stack**: Next.js 16 + Supabase (PostgreSQL, Auth, Storage) + MUI + Tailwind CSS v4 + Vercel
 - **Timeline**: MVP em ~3 semanas
 - **Budget**: Zero — usando tiers gratuitos de Supabase e Vercel
 - **LGPD**: Obrigatorio ter politica de privacidade por coletar dados pessoais
 - **Seguranca**: RLS no banco, honeypot nos formularios, HTTPS, numero da protetora nunca publico
-<!-- GSD:project-end -->
 
-<!-- GSD:stack-start source:research/STACK.md -->
 ## Technology Stack
 
-## Recommended Stack
-### Core Framework
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Next.js | 16.2.0 (latest stable) | Full-stack React framework | SSR for public pet listings (SEO), App Router for RSC, single codebase for public site + admin panel |
-| React | 19.x (bundled with Next.js 16) | UI layer | Required by Next.js 16; includes React Compiler support |
-| TypeScript | 5.x | Type safety | Next.js 16 requires TypeScript 5.1+; enforced by `create-next-app` defaults |
-- Public listing page (`/animals`) benefits from React Server Components — data fetched server-side, no client JS for the grid render, better LCP
-- Admin panel is server-rendered by default; sensitive data never reaches client unless explicitly passed
-- `proxy.ts` (formerly `middleware.ts`) runs on Node.js runtime in Next.js 16, removing the Edge runtime incompatibility with `@supabase/ssr` that existed in prior versions
-- `create-next-app` defaults to App Router + Turbopack; no configuration needed
-| Route | Strategy | Rationale |
-|-------|----------|-----------|
-| `/` (home) | Static (SSG) | No dynamic data; fast initial load |
-| `/animals` (listing) | ISR or dynamic server render | Animal list changes, but not per-request; revalidate on admin mutations |
-| `/animals/[slug]` (detail) | ISR | Per-animal pages; rebuilt when admin updates status/photos |
-| `/admin/*` | Dynamic server render | Authenticated, private; must never be cached |
-| `/sobre`, `/privacidade` | Static (SSG) | Purely informational content |
-### Database and Backend
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Supabase (PostgreSQL) | Latest (managed service) | Primary database | Free tier, RLS enforced at DB level, familiar SQL, structured data for animals + adoption forms |
-| Supabase Auth | Latest (managed) | Admin authentication | Email+password for single admin user; no OAuth needed per PROJECT.md; cookie-based session via `@supabase/ssr` |
-| Supabase Storage | Latest (managed) | Pet photo storage | Up to 5 photos per animal; free tier bucket; native image transformation API |
-### NPM Packages — Backend/Auth
-| Package | Version | Purpose | Notes |
-|---------|---------|---------|-------|
-| `@supabase/supabase-js` | `^2.x` (latest) | Core Supabase client | Base package required alongside `@supabase/ssr` |
-| `@supabase/ssr` | `^0.x` (latest stable) | SSR-safe Supabase client | Replaces deprecated `@supabase/auth-helpers-nextjs`; cookie-based sessions |
-### UI Layer
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Tailwind CSS | v4.x (stable since Jan 2025) | Styling | CSS-first config, zero-config content detection, 5x faster builds; `create-next-app` includes it by default |
-| shadcn/ui | CLI-based (no package version) | Component primitives | Copy-owned components, full code control, built on Radix UI (accessible), updated for Tailwind v4 + React 19 as of February 2025 |
-- Use `new-york` style (default for new projects; `default` style is being deprecated)
-- Relevant components to install: `card`, `button`, `badge`, `input`, `textarea`, `select`, `label`, `dialog`, `table`, `avatar`, `separator`, `skeleton`, `toast` (use `sonner` instead — shadcn deprecated its own `toast` component in favor of `sonner`)
-- Color customization: brand uses purple/pink — set OKLCH tokens in `globals.css` via `@theme` directive (Tailwind v4 CSS-first config)
-### Form Handling
-| Package | Version | Purpose | Notes |
-|---------|---------|---------|-------|
-| `react-hook-form` | `^7.72.0` | Form state management | Uncontrolled components, minimal re-renders |
-| `zod` | `^4.x` | Schema validation | TypeScript-first, client + server shared schemas |
-| `@hookform/resolvers` | `^5.2.2` | Bridge RHF and Zod | v5.2.2+ supports Zod v4; v4 and v3 auto-detected |
-### Image Handling
-| Approach | Rationale |
-|----------|-----------|
-| `next/image` with Supabase custom loader | Serves images through Supabase Storage transformation API (resize, WebP, quality) |
-| Supabase Image Transformations | Free plan: available; resizes on-the-fly, auto WebP for supported browsers |
-- Client-side file picker → validate type (jpg/png/webp) and size (< 5MB each) before upload
-- Use Supabase Storage standard upload for files < 6MB; TUS resumable upload only needed for larger files
-- Store photo URLs (or storage paths) in a separate `animal_photos` table with FK to `animals`, ordered by position
-- Bucket should be **public** with RLS restricting write/delete to authenticated admin only
-### Spam Protection
-| Approach | Rationale |
-|----------|-----------|
-| Honeypot field | Invisible input field in adoption form. Bots fill it; humans leave it empty. Zero UX friction. Zero cost. Chosen over CAPTCHA per PROJECT.md decision. |
-## Alternatives Considered
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Router | App Router | Pages Router | Pages Router is stable but lacks RSC; App Router is the default for new projects in Next.js 16; admin + public in one project is cleaner with App Router route groups |
-| Auth | Supabase Auth | NextAuth.js / Auth.js | Pre-decided stack; one less dependency; single admin user doesn't justify third-party auth layer |
-| UI library | shadcn/ui | Chakra UI, MUI | shadcn gives code ownership; Chakra/MUI carry runtime overhead and opinionated theming that conflicts with brand customization |
-| Form | react-hook-form + zod | Formik + yup | RHF has significantly lower re-render cost; zod is TypeScript-native and shares schemas across client and server |
-| Styling | Tailwind v4 | Tailwind v3, CSS Modules | v4 is faster, built into Next.js 16 defaults, CSS-first config eliminates `tailwind.config.js` maintenance |
-| Image upload | Supabase Storage | Cloudinary, AWS S3 | Free tier covers 1GB storage; no extra service to configure; integrated with existing RLS auth |
-| Notifications | (none in MVP) | Resend, SendGrid | Out of scope per PROJECT.md; deferred to Phase 2 |
-## Installation
-# Create project with latest Next.js (includes Tailwind v4, TypeScript, App Router, Turbopack)
-# Supabase
-# Form handling
-# UI components (shadcn/ui CLI — not an npm install)
-# Choose: new-york style, oklch colors, yes to CSS variables
-# Install shadcn components as needed
-## Environment Variables
-# Keep service role key server-only — never NEXT_PUBLIC_
-## Sources
-- Next.js 16 release blog: https://nextjs.org/blog/next-16 (official, October 2025)
-- Next.js 16.2.0 on GitHub releases: https://github.com/vercel/next.js/releases (verified March 2026)
-- Supabase Auth + Next.js App Router: https://supabase.com/docs/guides/auth/server-side/nextjs (official)
-- Supabase SSR package: https://supabase.com/docs/guides/auth/server-side/creating-a-client (official)
-- Supabase Image Transformations: https://supabase.com/docs/guides/storage/serving/image-transformations (official)
-- Tailwind CSS v4 release: https://tailwindcss.com/blog/tailwindcss-v4 (official, January 2025)
-- shadcn/ui Tailwind v4 docs: https://ui.shadcn.com/docs/tailwind-v4 (official, February 2025)
-- react-hook-form npm: https://www.npmjs.com/package/react-hook-form (v7.72.0)
-- zod npm: https://www.npmjs.com/package/zod (v4.3.6)
-- @hookform/resolvers: https://www.npmjs.com/package/@hookform/resolvers (v5.2.2, Zod v4 support)
-- Supabase Storage upload guide: https://supabase.com/docs/guides/storage/uploads/standard-uploads (official)
-## Confidence Summary
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Next.js version (16.2.0) | HIGH | Verified via GitHub releases + official blog |
-| App Router recommendation | HIGH | Official default since Next.js 13; mandatory choice for Next.js 16 new projects |
-| Supabase Auth pattern | HIGH | Official docs verified; `proxy.ts` is the correct Next.js 16 pattern |
-| Supabase Storage + RLS | HIGH | Official docs verified |
-| Image Transformations (free tier) | LOW | Official docs state Pro Plan required — must verify at project start |
-| Tailwind v4 + shadcn/ui | HIGH | Both officially documented with compatibility confirmed |
-| react-hook-form + zod + resolvers | HIGH | Versions verified via npm; Zod v4 support in resolvers v5.2.2+ confirmed |
-| `@supabase/ssr` exact version | MEDIUM | Pre-release versions seen in search; install `@latest` at project init |
-<!-- GSD:stack-end -->
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Next.js | 16.2.1 | Full-stack React framework (App Router, Turbopack) |
+| React | 19.2.x | UI layer |
+| TypeScript | 5.x | Type safety |
+| MUI (Material UI) | 7.x | Component library (replaces shadcn/ui) |
+| @emotion/react + styled | 11.x | CSS-in-JS for MUI |
+| Tailwind CSS | v4.x | Utility CSS (used alongside MUI) |
+| Supabase | Latest | PostgreSQL + Auth + Storage |
+| @supabase/ssr | 0.9.x | SSR-safe Supabase client with cookie sessions |
+| Zod | 4.x | Schema validation (client + server) |
+| react-hook-form | 7.x | Form state management |
+| @hookform/resolvers | 5.x | Bridge RHF and Zod |
 
-<!-- GSD:conventions-start source:CONVENTIONS.md -->
-## Conventions
+### Key Patterns
 
-Conventions not yet established. Will populate as patterns emerge during development.
-<!-- GSD:conventions-end -->
+- **proxy.ts** (not middleware.ts): Next.js 16 renamed middleware to proxy. Export must be named `proxy`.
+- **Server Components**: Public pages use RSC for SEO. No `component={Link}` prop on MUI components in Server Components — wrap `<Link>` around instead.
+- **Server Actions**: All mutations (create/edit/delete animals, submit forms, upload photos) use Server Actions.
+- **Zod v4**: Uses `.issues` (not `.errors`), `{ error: "..." }` (not `{ required_error: "..." }`).
+- **Type assertions**: Supabase queries use `as Animal | null` type assertions since we don't use the full Database generic.
+- **MUI + Tailwind**: MUI handles component styling; Tailwind handles layout utilities in `globals.css`.
 
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
 ## Architecture
 
-Architecture not yet mapped. Follow existing patterns found in the codebase.
-<!-- GSD:architecture-end -->
+```
+src/
+├── app/
+│   ├── layout.tsx                    # Root layout (ThemeRegistry, fonts)
+│   ├── (public)/                     # Public site (no auth)
+│   │   ├── layout.tsx                # Header + Footer
+│   │   ├── page.tsx                  # Home (hero + featured animals)
+│   │   ├── animais/page.tsx          # Animal listing with filters
+│   │   ├── animais/[slug]/page.tsx   # Animal profile + interest form
+│   │   ├── sobre/page.tsx            # Institutional page
+│   │   └── privacidade/page.tsx      # LGPD privacy policy
+│   ├── (admin)/                      # Admin panel (auth required)
+│   │   ├── layout.tsx                # Auth guard + AdminShell
+│   │   ├── AdminShell.tsx            # Sidebar navigation (client component)
+│   │   └── admin/
+│   │       ├── page.tsx              # Dashboard with stats
+│   │       ├── animais/page.tsx      # Animal list table
+│   │       ├── animais/novo/page.tsx # Create animal form
+│   │       ├── animais/[id]/page.tsx # Edit animal + photo upload
+│   │       └── formularios/page.tsx  # Interest forms viewer
+│   └── login/                        # Login page (outside route groups)
+├── components/
+│   └── public/                       # Reusable public components
+│       ├── PublicHeader.tsx
+│       ├── PublicFooter.tsx
+│       ├── AnimalCard.tsx
+│       ├── AnimalFilters.tsx
+│       ├── AnimalGallery.tsx
+│       └── InterestForm.tsx
+├── lib/
+│   ├── supabase/
+│   │   ├── server.ts                 # createServerClient (Server Components, Server Actions)
+│   │   ├── client.ts                 # createBrowserClient (Client Components)
+│   │   └── types.ts                  # Animal, InterestFormRow, Database types
+│   ├── schemas.ts                    # Zod schemas (animal, interest form)
+│   ├── theme.ts                      # MUI theme (purple/pink brand)
+│   ├── ThemeRegistry.tsx             # MUI + Emotion provider
+│   └── utils/
+│       └── slugify.ts                # URL slug generation
+└── proxy.ts                          # Auth guard for /admin/* and /login redirect
+```
 
-<!-- GSD:workflow-start source:GSD defaults -->
-## GSD Workflow Enforcement
+### Database Tables
 
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+- **animals**: id, name, slug, species, breed, age_months, size, sex, neutered, vaccinated, description, status, photo_urls[], cover_photo, submitted_by, submission_status, admin_feedback, adopted_at, created_at, updated_at
+- **interest_forms**: id, animal_id (FK), name, phone, message, created_at
+- **profiles**: id (FK auth.users), full_name, phone, role ('admin'|'user'), created_at, updated_at
+- **site_settings**: key (PK), value
 
-Use these entry points:
-- `/gsd:quick` for small fixes, doc updates, and ad-hoc tasks
-- `/gsd:debug` for investigation and bug fixing
-- `/gsd:execute-phase` for planned phase work
+### RLS Policies
 
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
-<!-- GSD:workflow-end -->
+- animals: anon SELECT (approved, not adopted OR adopted within 3 days); authenticated sees own + admin sees all
+- interest_forms: anon/authenticated INSERT; admin SELECT/DELETE
+- profiles: users read/update own; admin reads all
+- storage.objects (pet-photos): public read; authenticated upload; admin delete
+- **is_admin()**: security definer function — used everywhere for role checks (bypasses RLS)
 
+## Conventions
 
+- **Language**: UI text in Portuguese (pt-BR) with **correct accents always** (não, você, formulário, solicitação, descrição, espécie, raça, adoção, catálogo, disponível, etc). Database enum values (disponivel, adotado, femea, medio) do NOT use accents — they are internal keys. Code (variables, functions, comments) in English.
+- **Route groups**: `(public)` for visitor-facing, `(admin)` for authenticated pages.
+- **MUI in Server Components**: Never pass `component={Link}` to MUI. Wrap `<Link>` around MUI element instead.
+- **Supabase queries**: Use type assertions (`as Animal | null`) for `.select("*").single()` results.
+- **Server Actions**: All mutations go through Server Actions in `actions.ts` files colocated with the page.
+- **Photo storage path**: `animals/{animal_id}/{timestamp}-{random}.{ext}` in `pet-photos` bucket.
+- **Status values**: "disponivel" | "adotado" — adotado stays visible on public site for 3 days (grayed out), then hidden. Always visible in admin.
+- **Adopted grace period**: When status changes to "adotado", `adopted_at` is set. Public queries include adopted animals where `adopted_at > now() - 3 days`.
+- **Dynamic age**: `age_months` is the age at registration time. Display age is computed as `age_months + months_since(created_at)` via `computeCurrentAge()`.
+- **ConfirmDialog**: Always use `src/components/ConfirmDialog.tsx` for confirmations. Never use native `confirm()`.
+- **Auth role check**: Always use `supabase.rpc("is_admin")` instead of querying profiles table directly (RLS issue).
+- **Responsividade**: Todo componente DEVE funcionar em mobile (< 600px). Usar breakpoints responsivos (`sx={{ p: { xs: 2, sm: 4 } }}`). Tabelas devem ter `minWidth` + scroll horizontal. Stacks devem usar `direction={{ xs: "column", sm: "row" }}` quando apropriado. Sempre pensar mobile-first ao criar features.
 
-<!-- GSD:profile-start -->
-## Developer Profile
+## Self-Updating Instructions
 
-> Profile not yet configured. Run `/gsd:profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-<!-- GSD:profile-end -->
+**Claude must keep this CLAUDE.md up to date as the project evolves:**
+
+1. **After adding new routes/pages**: Update the Architecture tree.
+2. **After changing the stack** (adding/removing packages): Update the Technology Stack table.
+3. **After discovering a new pattern/convention**: Add it to Conventions.
+4. **After schema changes**: Update Database Tables section.
+5. **After adding new components**: Update the Architecture tree.
+
+When in doubt, update CLAUDE.md. This file is the single source of truth for the project's current state and conventions.
