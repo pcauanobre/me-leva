@@ -80,7 +80,7 @@ function drawSlot(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   name: string,
-  slot: (typeof SLOTS)[0]
+  slot: { cx: number; cy: number; w: number; h: number; rotation: number }
 ) {
   const { cx, cy, w, h, rotation } = slot;
   const rad = (rotation * Math.PI) / 180;
