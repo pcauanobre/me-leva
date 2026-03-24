@@ -15,7 +15,31 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    return { error: "Email ou senha invalidos." };
+    if (error.message.includes("Email not confirmed")) {
+      return {
+        error:
+          "Seu email ainda não foi confirmado. Verifique sua caixa de entrada.",
+      };
+    }
+    return { error: "Email ou senha inválidos." };
+  }
+
+  // Safety net: ensure profile exists (handles users registered before trigger)
+  if (data.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", data.user.id)
+      .single();
+
+    if (!profile) {
+      await supabase.from("profiles").insert({
+        id: data.user.id,
+        full_name: data.user.user_metadata?.full_name || "Usuário",
+        phone: data.user.user_metadata?.phone || null,
+        role: "user",
+      });
+    }
   }
 
   // Check role using security definer function

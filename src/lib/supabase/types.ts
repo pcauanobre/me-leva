@@ -4,6 +4,7 @@ export type AnimalSize = "pequeno" | "medio" | "grande";
 export type AnimalSex = "macho" | "femea";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type UserRole = "admin" | "user";
+export type AdoptionFormStatus = "pendente" | "aprovado" | "rejeitado";
 
 export interface Animal {
   id: string;
@@ -52,6 +53,31 @@ export interface InterestFormRow {
   animals?: Pick<Animal, "id" | "name" | "slug" | "cover_photo"> | null;
 }
 
+export interface AdoptionFormRow {
+  id: string;
+  email: string;
+  whatsapp: string;
+  full_name: string;
+  social_media: string;
+  address: string;
+  age: number;
+  marital_status: string;
+  education_level: string;
+  profession: string;
+  animal_species: string;
+  animal_sex: string;
+  animal_age: string;
+  animal_coat: string;
+  interview_answers: Record<string, string>;
+  animal_id: string | null;
+  status: AdoptionFormStatus;
+  admin_notes: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  animals?: Pick<Animal, "id" | "name" | "slug" | "cover_photo"> | null;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -75,6 +101,12 @@ export type Database = {
       };
       site_settings: {
         Row: SiteSetting;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      adoption_forms: {
+        Row: AdoptionFormRow;
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
         Relationships: [];

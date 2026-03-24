@@ -50,6 +50,7 @@ src/
 │   │   ├── page.tsx                  # Home (hero + featured animals)
 │   │   ├── animais/page.tsx          # Animal listing with filters
 │   │   ├── animais/[slug]/page.tsx   # Animal profile + interest form
+│   │   ├── adotar/page.tsx           # Comprehensive adoption form (wizard)
 │   │   ├── sobre/page.tsx            # Institutional page
 │   │   └── privacidade/page.tsx      # LGPD privacy policy
 │   ├── (admin)/                      # Admin panel (auth required)
@@ -60,7 +61,10 @@ src/
 │   │       ├── animais/page.tsx      # Animal list table
 │   │       ├── animais/novo/page.tsx # Create animal form
 │   │       ├── animais/[id]/page.tsx # Edit animal + photo upload
-│   │       └── formularios/page.tsx  # Interest forms viewer
+│   │       ├── formularios/page.tsx  # Interest forms viewer
+│   │       └── adocao/              # Adoption forms management
+│   │           ├── page.tsx         # Adoption forms list + filters
+│   │           └── [id]/page.tsx    # Adoption form detail + edit
 │   └── login/                        # Login page (outside route groups)
 ├── components/
 │   └── public/                       # Reusable public components
@@ -69,13 +73,20 @@ src/
 │       ├── AnimalCard.tsx
 │       ├── AnimalFilters.tsx
 │       ├── AnimalGallery.tsx
-│       └── InterestForm.tsx
+│       ├── InterestForm.tsx
+│       ├── AdoptionForm.tsx          # Multi-step adoption form wizard
+│       └── AdoptionFormSteps/        # Step sub-components
+│           ├── ContactStep.tsx
+│           ├── AdopterDataStep.tsx
+│           ├── AnimalPreferenceStep.tsx
+│           └── InterviewStep.tsx
 ├── lib/
 │   ├── supabase/
 │   │   ├── server.ts                 # createServerClient (Server Components, Server Actions)
 │   │   ├── client.ts                 # createBrowserClient (Client Components)
-│   │   └── types.ts                  # Animal, InterestFormRow, Database types
-│   ├── schemas.ts                    # Zod schemas (animal, interest form)
+│   │   └── types.ts                  # Animal, InterestFormRow, AdoptionFormRow, Database types
+│   ├── schemas.ts                    # Zod schemas (animal, interest form, adoption form)
+│   ├── adoptionQuestions.ts          # 63 interview questions + groupings constant
 │   ├── theme.ts                      # MUI theme (purple/pink brand)
 │   ├── ThemeRegistry.tsx             # MUI + Emotion provider
 │   └── utils/
@@ -88,12 +99,14 @@ src/
 - **animals**: id, name, slug, species, breed, age_months, size, sex, neutered, vaccinated, description, status, photo_urls[], cover_photo, submitted_by, submission_status, admin_feedback, adopted_at, created_at, updated_at
 - **interest_forms**: id, animal_id (FK), name, phone, message, created_at
 - **profiles**: id (FK auth.users), full_name, phone, role ('admin'|'user'), created_at, updated_at
+- **adoption_forms**: id, email, whatsapp, full_name, social_media, address, age, marital_status, education_level, profession, animal_species, animal_sex, animal_age, animal_coat, interview_answers (JSONB), animal_id (FK nullable), status ('pendente'|'aprovado'|'rejeitado'), admin_notes, reviewed_at, created_at, updated_at
 - **site_settings**: key (PK), value
 
 ### RLS Policies
 
 - animals: anon SELECT (approved, not adopted OR adopted within 3 days); authenticated sees own + admin sees all
 - interest_forms: anon/authenticated INSERT; admin SELECT/DELETE
+- adoption_forms: anon/authenticated INSERT; admin SELECT/UPDATE/DELETE
 - profiles: users read/update own; admin reads all
 - storage.objects (pet-photos): public read; authenticated upload; admin delete
 - **is_admin()**: security definer function — used everywhere for role checks (bypasses RLS)
@@ -111,6 +124,8 @@ src/
 - **Dynamic age**: `age_months` is the age at registration time. Display age is computed as `age_months + months_since(created_at)` via `computeCurrentAge()`.
 - **ConfirmDialog**: Always use `src/components/ConfirmDialog.tsx` for confirmations. Never use native `confirm()`.
 - **Auth role check**: Always use `supabase.rpc("is_admin")` instead of querying profiles table directly (RLS issue).
+- **Profile creation**: Handled by database trigger `handle_new_user()` on `auth.users` INSERT. Pass `full_name` and `phone` via `signUp({ options: { data: {...} } })`. Login has a safety net that creates missing profiles.
+- **Email confirmation**: Disabled in production Supabase dashboard. No SMTP configured.
 - **Responsividade**: Todo componente DEVE funcionar em mobile (< 600px). Usar breakpoints responsivos (`sx={{ p: { xs: 2, sm: 4 } }}`). Tabelas devem ter `minWidth` + scroll horizontal. Stacks devem usar `direction={{ xs: "column", sm: "row" }}` quando apropriado. Sempre pensar mobile-first ao criar features.
 
 ## Self-Updating Instructions

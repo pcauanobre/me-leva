@@ -27,6 +27,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import HomeIcon from "@mui/icons-material/Home";
 import SearchIcon from "@mui/icons-material/Search";
 import InfoIcon from "@mui/icons-material/Info";
+import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
 import LoginIcon from "@mui/icons-material/Login";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -35,6 +36,7 @@ import { logout } from "@/app/login/actions";
 const NAV_LINKS = [
   { label: "Início", href: "/", icon: <HomeIcon /> },
   { label: "Animais", href: "/animais", icon: <SearchIcon /> },
+  { label: "Adotar", href: "/adotar", icon: <VolunteerActivismIcon /> },
   { label: "Sobre", href: "/sobre", icon: <InfoIcon /> },
 ];
 

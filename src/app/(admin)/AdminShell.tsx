@@ -27,6 +27,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import LogoutIcon from "@mui/icons-material/Logout";
 import HomeIcon from "@mui/icons-material/Home";
 import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
+import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
 import { logout } from "@/app/login/actions";
 
 const DRAWER_WIDTH = 260;
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { label: "Animais", href: "/admin/animais", icon: <PetsIcon /> },
   { label: "Solicitações", href: "/admin/solicitacoes", icon: <AssignmentIcon /> },
   { label: "Formulários", href: "/admin/formularios", icon: <DescriptionIcon /> },
+  { label: "Adoção", href: "/admin/adocao", icon: <VolunteerActivismIcon /> },
   { label: "Stories", href: "/admin/stories", icon: <PhotoLibraryIcon /> },
 ];
 

@@ -28,6 +28,12 @@ export async function register(formData: FormData) {
   const { error, data } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: {
+        full_name: fullName,
+        phone,
+      },
+    },
   });
 
   if (error) {
@@ -37,13 +43,31 @@ export async function register(formData: FormData) {
     return { error: "Erro ao criar conta: " + error.message };
   }
 
+  // If email confirmation is enabled, session will be null
+  if (!data.session) {
+    return {
+      error:
+        "Conta criada! Verifique seu email para confirmar o cadastro antes de fazer login.",
+    };
+  }
+
+  // Profile is created automatically via database trigger (handle_new_user).
+  // As a safety net, ensure profile exists before redirecting.
   if (data.user) {
-    await supabase.from("profiles").insert({
-      id: data.user.id,
-      full_name: fullName,
-      phone,
-      role: "user",
-    });
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", data.user.id)
+      .single();
+
+    if (!profile) {
+      await supabase.from("profiles").insert({
+        id: data.user.id,
+        full_name: fullName,
+        phone,
+        role: "user",
+      });
+    }
   }
 
   redirect("/minha-conta");

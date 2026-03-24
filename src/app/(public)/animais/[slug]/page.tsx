@@ -199,11 +199,29 @@ export default async function AnimalProfilePage({
               </Box>
             )}
 
-            {/* Interest form - only show for non-adopted */}
+            {/* Interest form + adoption form link - only show for non-adopted */}
             {animal.status !== "adotado" && (
-              <Box id="interesse" sx={{ mt: { xs: 2, sm: 3 } }}>
-                <InterestForm animalId={animal.id} animalName={animal.name} />
-              </Box>
+              <>
+                <Box id="interesse" sx={{ mt: { xs: 2, sm: 3 } }}>
+                  <InterestForm animalId={animal.id} animalName={animal.name} />
+                </Box>
+                <Box sx={{ mt: 2, textAlign: "center" }}>
+                  <Link
+                    href={`/adotar?animal=${animal.id}`}
+                    style={{ textDecoration: "none" }}
+                  >
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      size="large"
+                      fullWidth
+                      sx={{ fontWeight: 600 }}
+                    >
+                      Preencher Formulário Completo de Adoção
+                    </Button>
+                  </Link>
+                </Box>
+              </>
             )}
           </Stack>
         </Grid>

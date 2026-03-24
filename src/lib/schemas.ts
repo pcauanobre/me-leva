@@ -68,3 +68,76 @@ export const interestFormSchema = z.object({
 });
 
 export type InterestFormData = z.infer<typeof interestFormSchema>;
+
+// --- Adoption Form Schemas ---
+
+export const adoptionStep1Schema = z.object({
+  email: z.string().email("Email inválido"),
+  whatsapp: z
+    .string()
+    .min(10, "WhatsApp deve ter pelo menos 10 dígitos")
+    .max(15, "WhatsApp inválido"),
+});
+
+export const adoptionStep2Schema = z.object({
+  full_name: z.string().min(2, "Nome é obrigatório"),
+  social_media: z.string().min(1, "Facebook ou Instagram é obrigatório"),
+  address: z.string().min(5, "Endereço completo é obrigatório"),
+  age: z.coerce.number().int().min(18, "Idade mínima é 18 anos"),
+  marital_status: z.string().min(1, "Estado civil é obrigatório"),
+  education_level: z.string().min(1, "Escolaridade é obrigatória"),
+  profession: z.string().min(1, "Profissão é obrigatória"),
+});
+
+export const adoptionStep3Schema = z.object({
+  animal_species: z.enum(["cao", "gato"], {
+    error: "Espécie é obrigatória",
+  }),
+  animal_sex: z.enum(["macho", "femea", "tanto_faz"], {
+    error: "Sexo é obrigatório",
+  }),
+  animal_age: z.enum(["filhote", "adulto", "tanto_faz"], {
+    error: "Idade do animal é obrigatória",
+  }),
+  animal_coat: z.enum(["longa", "curta", "tanto_faz"], {
+    error: "Pelagem é obrigatória",
+  }),
+});
+
+export const adoptionFormSchema = z.object({
+  // Step 1
+  email: z.string().email("Email inválido"),
+  whatsapp: z
+    .string()
+    .min(10, "WhatsApp deve ter pelo menos 10 dígitos")
+    .max(15, "WhatsApp inválido"),
+  // Step 2
+  full_name: z.string().min(2, "Nome é obrigatório"),
+  social_media: z.string().min(1, "Facebook ou Instagram é obrigatório"),
+  address: z.string().min(5, "Endereço completo é obrigatório"),
+  age: z.coerce.number().int().min(18, "Idade mínima é 18 anos"),
+  marital_status: z.string().min(1, "Estado civil é obrigatório"),
+  education_level: z.string().min(1, "Escolaridade é obrigatória"),
+  profession: z.string().min(1, "Profissão é obrigatória"),
+  // Step 3
+  animal_species: z.enum(["cao", "gato"], {
+    error: "Espécie é obrigatória",
+  }),
+  animal_sex: z.enum(["macho", "femea", "tanto_faz"], {
+    error: "Sexo é obrigatório",
+  }),
+  animal_age: z.enum(["filhote", "adulto", "tanto_faz"], {
+    error: "Idade do animal é obrigatória",
+  }),
+  animal_coat: z.enum(["longa", "curta", "tanto_faz"], {
+    error: "Pelagem é obrigatória",
+  }),
+  // Step 4: interview answers as record
+  interview_answers: z.record(z.string(), z.string()),
+  // Optional animal link
+  animal_id: z.string().uuid().optional().nullable(),
+  // Honeypot
+  website: z.string().max(0).optional(),
+});
+
+export type AdoptionFormData = z.infer<typeof adoptionFormSchema>;
