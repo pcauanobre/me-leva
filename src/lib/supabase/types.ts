@@ -5,6 +5,7 @@ export type AnimalSex = "macho" | "femea";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type UserRole = "admin" | "user";
 export type AdoptionFormStatus = "pendente" | "aprovado" | "rejeitado";
+export type DonationRequestStatus = "pendente" | "aceito" | "recusado";
 
 export interface Animal {
   id: string;
@@ -76,6 +77,31 @@ export interface AdoptionFormRow {
   created_at: string;
   updated_at: string;
   animals?: Pick<Animal, "id" | "name" | "slug" | "cover_photo"> | null;
+}
+
+export interface DonationRequest {
+  id: string;
+  name: string;
+  email: string;
+  whatsapp: string;
+  animal_name: string;
+  species: string;
+  breed: string | null;
+  age_months: number | null;
+  sex: string;
+  neutered: boolean;
+  vaccinated: boolean;
+  description: string;
+  donation_reason: string;
+  urgency: "urgente" | "normal";
+  status: DonationRequestStatus;
+  admin_notes: string | null;
+  reviewed_at: string | null;
+  converted_animal_id: string | null;
+  terms_accepted: boolean;
+  website: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type Database = {

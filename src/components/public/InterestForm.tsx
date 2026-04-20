@@ -45,10 +45,13 @@ export default function InterestForm({ animalId, animalName }: Props) {
       <Paper className="animate-scale-in" sx={{ p: { xs: 2, sm: 4 }, textAlign: "center" }}>
         <CheckCircleIcon sx={{ fontSize: { xs: 48, sm: 64 }, color: "success.main", mb: { xs: 1.5, sm: 2 } }} />
         <Typography variant="h5" fontWeight={700} gutterBottom sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
-          Formulário enviado!
+          Formulário recebido!
         </Typography>
         <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-          Obrigado pelo seu interesse em {animalName}! Entraremos em contato em breve.
+          Obrigado pelo interesse em {animalName}! Em breve entraremos em contato para dar início à entrevista de adoção.
+        </Typography>
+        <Typography color="text.secondary" variant="body2" sx={{ mt: 1, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
+          Lembramos que o aceite está sujeito à triagem — o envio do formulário não confirma a adoção.
         </Typography>
       </Paper>
     );
@@ -127,6 +130,26 @@ export default function InterestForm({ animalId, animalName }: Props) {
               </Typography>
             }
           />
+
+          <FormControlLabel
+            control={<Checkbox name="terms_accepted" value="true" required />}
+            label={
+              <Typography variant="body2" sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
+                Li e concordo com os{" "}
+                <Link
+                  href="/termos"
+                  target="_blank"
+                  style={{ color: "#8B3FA0" }}
+                >
+                  Termos de Uso
+                </Link>
+              </Typography>
+            }
+          />
+
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.8rem" } }}>
+            O envio deste formulário não garante a adoção — é apenas o início do processo de triagem. Entraremos em contato para agendar uma entrevista.
+          </Typography>
 
           <Button
             type="submit"

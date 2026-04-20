@@ -10,6 +10,7 @@ export async function submitInterestForm(formData: FormData) {
     phone: formData.get("phone"),
     message: formData.get("message") ?? "",
     consent: formData.get("consent") === "true",
+    terms_accepted: formData.get("terms_accepted") === "true",
     website: formData.get("website") ?? "",
   };
 
@@ -32,6 +33,7 @@ export async function submitInterestForm(formData: FormData) {
     name: parsed.data.name,
     phone: parsed.data.phone,
     message: parsed.data.message || null,
+    terms_accepted: parsed.data.terms_accepted,
   });
 
   if (error) {

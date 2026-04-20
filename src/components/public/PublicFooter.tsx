@@ -30,18 +30,22 @@ export default function PublicFooter() {
           </Stack>
 
           <Stack direction="row" spacing={{ xs: 2, sm: 3 }}>
-            <Link
-              href="/sobre"
-              style={{ textDecoration: "none" }}
-            >
+            <Link href="/sobre" style={{ textDecoration: "none" }}>
               <Typography sx={{ color: "text.secondary", fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                 Sobre
               </Typography>
             </Link>
-            <Link
-              href="/privacidade"
-              style={{ textDecoration: "none" }}
-            >
+            <Link href="/quero-doar" style={{ textDecoration: "none" }}>
+              <Typography sx={{ color: "text.secondary", fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                Quero Doar
+              </Typography>
+            </Link>
+            <Link href="/termos" style={{ textDecoration: "none" }}>
+              <Typography sx={{ color: "text.secondary", fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                Termos
+              </Typography>
+            </Link>
+            <Link href="/privacidade" style={{ textDecoration: "none" }}>
               <Typography sx={{ color: "text.secondary", fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                 Privacidade
               </Typography>

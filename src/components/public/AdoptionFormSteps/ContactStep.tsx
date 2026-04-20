@@ -1,15 +1,17 @@
 "use client";
 
-import { TextField } from "@mui/material";
+import { TextField, FormControlLabel, Checkbox, Typography } from "@mui/material";
+import Link from "next/link";
 import { formatPhoneDisplay, phoneToDigits } from "@/lib/utils/formatPhone";
 
 interface ContactStepProps {
-  data: { email: string; whatsapp: string };
+  data: { email: string; whatsapp: string; terms_accepted: boolean };
   onChange: (field: string, value: string) => void;
+  onBooleanChange: (field: string, value: boolean) => void;
   errors: Record<string, string>;
 }
 
-export default function ContactStep({ data, onChange, errors }: ContactStepProps) {
+export default function ContactStep({ data, onChange, onBooleanChange, errors }: ContactStepProps) {
   function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
     const digits = phoneToDigits(e.target.value);
     onChange("whatsapp", digits);
@@ -38,6 +40,29 @@ export default function ContactStep({ data, onChange, errors }: ContactStepProps
         placeholder="(85) 99999-9999"
         inputProps={{ inputMode: "tel", maxLength: 16 }}
       />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={data.terms_accepted}
+            onChange={(e) => onBooleanChange("terms_accepted", e.target.checked)}
+            required
+          />
+        }
+        label={
+          <Typography variant="body2">
+            Li e concordo com os{" "}
+            <Link href="/termos" target="_blank" style={{ color: "#8B3FA0" }}>
+              Termos de Uso
+            </Link>
+          </Typography>
+        }
+      />
+      {errors.terms_accepted && (
+        <Typography variant="body2" color="error" sx={{ mt: -1 }}>
+          {errors.terms_accepted}
+        </Typography>
+      )}
     </>
   );
 }

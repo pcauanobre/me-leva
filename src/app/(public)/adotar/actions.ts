@@ -35,6 +35,7 @@ export async function submitAdoptionForm(formData: FormData) {
     animal_coat: formData.get("animal_coat") as string,
     interview_answers: interviewAnswers,
     animal_id: (formData.get("animal_id") as string) || null,
+    terms_accepted: formData.get("terms_accepted") === "true",
     website: "",
   };
 
@@ -68,6 +69,7 @@ export async function submitAdoptionForm(formData: FormData) {
     animal_coat: parsed.data.animal_coat,
     interview_answers: parsed.data.interview_answers,
     animal_id: parsed.data.animal_id || null,
+    terms_accepted: parsed.data.terms_accepted,
   });
 
   if (error) {

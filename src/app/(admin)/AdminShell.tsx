@@ -32,10 +32,13 @@ import { logout } from "@/app/login/actions";
 
 const DRAWER_WIDTH = 260;
 
+import FavoriteIcon from "@mui/icons-material/Favorite";
+
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: <DashboardIcon /> },
   { label: "Animais", href: "/admin/animais", icon: <PetsIcon /> },
   { label: "Solicitações", href: "/admin/solicitacoes", icon: <AssignmentIcon /> },
+  { label: "Doações", href: "/admin/doacoes", icon: <FavoriteIcon /> },
   { label: "Formulários", href: "/admin/formularios", icon: <DescriptionIcon /> },
   { label: "Adoção", href: "/admin/adocao", icon: <VolunteerActivismIcon /> },
   { label: "Stories", href: "/admin/stories", icon: <PhotoLibraryIcon /> },

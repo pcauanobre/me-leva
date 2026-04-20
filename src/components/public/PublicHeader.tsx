@@ -33,10 +33,13 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { logout } from "@/app/login/actions";
 
+import FavoriteIcon from "@mui/icons-material/Favorite";
+
 const NAV_LINKS = [
   { label: "Início", href: "/", icon: <HomeIcon /> },
   { label: "Animais", href: "/animais", icon: <SearchIcon /> },
   { label: "Adotar", href: "/adotar", icon: <VolunteerActivismIcon /> },
+  { label: "Quero Doar", href: "/quero-doar", icon: <FavoriteIcon /> },
   { label: "Sobre", href: "/sobre", icon: <InfoIcon /> },
 ];
 

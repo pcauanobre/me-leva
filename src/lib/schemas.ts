@@ -64,6 +64,9 @@ export const interestFormSchema = z.object({
   consent: z.literal(true, {
     error: "Você deve aceitar a política de privacidade",
   }),
+  terms_accepted: z.literal(true, {
+    error: "Você deve aceitar os Termos de Uso",
+  }),
   website: z.string().max(0).optional(), // honeypot
 });
 
@@ -77,6 +80,9 @@ export const adoptionStep1Schema = z.object({
     .string()
     .min(10, "WhatsApp deve ter pelo menos 10 dígitos")
     .max(15, "WhatsApp inválido"),
+  terms_accepted: z.literal(true, {
+    error: "Você deve aceitar os Termos de Uso",
+  }),
 });
 
 export const adoptionStep2Schema = z.object({
@@ -136,8 +142,39 @@ export const adoptionFormSchema = z.object({
   interview_answers: z.record(z.string(), z.string()),
   // Optional animal link
   animal_id: z.string().uuid().optional().nullable(),
+  // Legal
+  terms_accepted: z.literal(true, {
+    error: "Você deve aceitar os Termos de Uso",
+  }),
   // Honeypot
   website: z.string().max(0).optional(),
 });
 
 export type AdoptionFormData = z.infer<typeof adoptionFormSchema>;
+
+export const donationRequestSchema = z.object({
+  name: z.string().min(2, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  whatsapp: z
+    .string()
+    .min(10, "WhatsApp deve ter pelo menos 10 dígitos")
+    .max(15, "WhatsApp inválido"),
+  animal_name: z.string().min(1, "Nome do animal é obrigatório"),
+  species: z.enum(["cachorro", "gato", "outro"], {
+    error: "Espécie é obrigatória",
+  }),
+  breed: z.string().optional().default(""),
+  age_months: z.coerce.number().int().min(0).optional(),
+  sex: z.enum(["macho", "femea"], { error: "Sexo é obrigatório" }),
+  neutered: z.coerce.boolean().default(false),
+  vaccinated: z.coerce.boolean().default(false),
+  description: z.string().min(10, "Descreva o animal (mínimo 10 caracteres)"),
+  donation_reason: z.string().min(10, "Explique o motivo da doação (mínimo 10 caracteres)"),
+  urgency: z.enum(["urgente", "normal"]).default("normal"),
+  terms_accepted: z.literal(true, {
+    error: "Você deve aceitar os Termos de Uso",
+  }),
+  website: z.string().max(0).optional(),
+});
+
+export type DonationRequestFormData = z.infer<typeof donationRequestSchema>;

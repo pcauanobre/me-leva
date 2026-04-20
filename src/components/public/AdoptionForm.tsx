@@ -50,6 +50,7 @@ interface FormState {
   // Step 1
   email: string;
   whatsapp: string;
+  terms_accepted: boolean;
   // Step 2
   full_name: string;
   social_media: string;
@@ -71,6 +72,7 @@ function getInitialState(): FormState {
   return {
     email: "",
     whatsapp: "",
+    terms_accepted: false,
     full_name: "",
     social_media: "",
     address: "",
@@ -132,6 +134,15 @@ export default function AdoptionForm({
     });
   }, []);
 
+  const handleBooleanChange = useCallback((field: string, value: boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
   const handleInterviewChange = useCallback((key: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -151,6 +162,7 @@ export default function AdoptionForm({
         result = adoptionStep1Schema.safeParse({
           email: formData.email,
           whatsapp: formData.whatsapp,
+          terms_accepted: formData.terms_accepted,
         });
         break;
       case 1:
@@ -243,6 +255,7 @@ export default function AdoptionForm({
         JSON.stringify(formData.interview_answers)
       );
       if (animalId) fd.set("animal_id", animalId);
+      fd.set("terms_accepted", formData.terms_accepted ? "true" : "");
       fd.set("website", ""); // honeypot
 
       const result = await submitAdoptionForm(fd);
@@ -271,12 +284,14 @@ export default function AdoptionForm({
           sx={{ fontSize: 64, color: "success.main", mb: 2 }}
         />
         <Typography variant="h5" fontWeight={700} gutterBottom>
-          Formulário enviado com sucesso!
+          Formulário enviado!
         </Typography>
         <Typography color="text.secondary">
-          Obrigado pelo seu interesse em adotar
-          {animalName ? ` o(a) ${animalName}` : " um animalzinho"}! Entraremos
-          em contato pelo WhatsApp informado para dar continuidade ao processo.
+          Obrigado pelo interesse em adotar
+          {animalName ? ` o(a) ${animalName}` : " um animalzinho"}! Entraremos em contato pelo WhatsApp para agendar a entrevista.
+        </Typography>
+        <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
+          O preenchimento do formulário não confirma a adoção — ela está sujeita à aprovação após a triagem.
         </Typography>
       </Paper>
     );
@@ -329,8 +344,9 @@ export default function AdoptionForm({
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {activeStep === 0 && (
           <ContactStep
-            data={{ email: formData.email, whatsapp: formData.whatsapp }}
+            data={{ email: formData.email, whatsapp: formData.whatsapp, terms_accepted: formData.terms_accepted }}
             onChange={handleFieldChange}
+            onBooleanChange={handleBooleanChange}
             errors={errors}
           />
         )}
