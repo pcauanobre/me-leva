@@ -25,3 +25,5 @@ story-place-holder.png
 # claude code
 .claude/
 .planning/
+.vercel
+.env*.local

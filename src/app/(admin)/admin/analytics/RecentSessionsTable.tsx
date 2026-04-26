@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
 import {
   Box,
   Chip,
+  IconButton,
   Stack,
   Table,
   TableBody,
@@ -12,7 +14,11 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Tooltip,
 } from "@mui/material";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { deleteAnalyticsSession } from "./actions";
 
 export interface RecentSession {
   id: string;
@@ -44,11 +50,28 @@ function deviceLabel(value: string | null): string {
 export default function RecentSessionsTable({ sessions }: Props) {
   const router = useRouter();
   const params = useSearchParams();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, startDelete] = useTransition();
 
   function open(id: string) {
     const sp = new URLSearchParams(params.toString());
     sp.set("session", id);
     router.push(`?${sp.toString()}`);
+  }
+
+  function confirmDelete(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setPendingDeleteId(id);
+  }
+
+  function performDelete() {
+    const id = pendingDeleteId;
+    if (!id) return;
+    startDelete(async () => {
+      await deleteAnalyticsSession(id);
+      setPendingDeleteId(null);
+      router.refresh();
+    });
   }
 
   if (sessions.length === 0) {
@@ -84,6 +107,7 @@ export default function RecentSessionsTable({ sessions }: Props) {
             <TableCell sx={{ fontWeight: 700, color: "text.secondary" }}>
               Última atividade
             </TableCell>
+            <TableCell sx={{ fontWeight: 700, color: "text.secondary" }} align="right" />
           </TableRow>
         </TableHead>
         <TableBody>
@@ -155,10 +179,34 @@ export default function RecentSessionsTable({ sessions }: Props) {
                   })}
                 </Typography>
               </TableCell>
+              <TableCell align="right" sx={{ width: 56 }}>
+                <Tooltip title="Excluir sessão">
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={(e) => confirmDelete(s.id, e)}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Excluir sessão"
+        message={
+          isDeleting
+            ? "Excluindo..."
+            : "Apagar esta sessão e todos os eventos associados? Esta ação não pode ser desfeita."
+        }
+        confirmLabel="Excluir"
+        confirmColor="error"
+        onConfirm={performDelete}
+        onCancel={() => !isDeleting && setPendingDeleteId(null)}
+      />
     </TableContainer>
   );
 }

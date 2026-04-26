@@ -35,6 +35,9 @@ import SessionTimelineDialog from "./SessionTimelineDialog";
 import RecentSessionsTable, {
   type RecentSession,
 } from "./RecentSessionsTable";
+import AbandonedFormsList, { type AbandonedRow } from "./AbandonedFormsList";
+
+const TOTAL_FORM_STEPS = 4;
 
 export const metadata: Metadata = {
   title: "Análises",
@@ -338,6 +341,52 @@ export default async function AnalyticsPage({
     }
   }
 
+  // Abandoned forms: sessions that opened the form but did NOT submit
+  const sessionsByOpen = sessionByEventType.get("adoption_form_open") ?? new Set();
+  const sessionsBySubmit =
+    sessionByEventType.get("adoption_form_submit") ?? new Set();
+  const maxStepBySession = new Map<string, number>();
+  const lastFormEventBySession = new Map<string, AnalyticsEvent>();
+  for (const e of eventsInScope) {
+    if (
+      e.event_type === "adoption_form_open" ||
+      e.event_type === "adoption_form_step" ||
+      e.event_type === "adoption_form_abandon"
+    ) {
+      const step =
+        e.event_type === "adoption_form_open"
+          ? 1
+          : e.form_step ?? 1;
+      const prev = maxStepBySession.get(e.session_id) ?? 0;
+      if (step > prev) maxStepBySession.set(e.session_id, step);
+
+      const prevEv = lastFormEventBySession.get(e.session_id);
+      if (!prevEv || prevEv.created_at < e.created_at) {
+        lastFormEventBySession.set(e.session_id, e);
+      }
+    }
+  }
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
+  const abandonedRows: AbandonedRow[] = Array.from(sessionsByOpen)
+    .filter((sid) => !sessionsBySubmit.has(sid))
+    .map((sid) => {
+      const sess = sessionById.get(sid);
+      const lastEv = lastFormEventBySession.get(sid);
+      return {
+        sessionId: sid,
+        ip: sess?.ip_address ?? null,
+        device: sess?.device_type ?? null,
+        browser: sess?.browser ?? null,
+        isAuthenticated: sess?.is_authenticated ?? false,
+        reachedStep: maxStepBySession.get(sid) ?? 1,
+        totalSteps: TOTAL_FORM_STEPS,
+        durationMs: lastEv?.duration_ms ?? null,
+        lastSeenAt: sess?.last_seen_at ?? lastEv?.created_at ?? new Date().toISOString(),
+      };
+    })
+    .sort((a, b) => (a.lastSeenAt < b.lastSeenAt ? 1 : -1))
+    .slice(0, 20);
+
   // Session focus (drill-down) — fetch independently to avoid being limited by date range
   let focusSession: (AnalyticsSession & { user_email: string | null }) | null = null;
   let focusEvents: Array<
@@ -640,6 +689,35 @@ export default async function AnalyticsPage({
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Abandoned forms */}
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{ mb: 1 }}
+        >
+          <Box>
+            <Typography variant="h6" fontWeight={700}>
+              Formulários abandonados
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Visitantes que abriram o formulário mas não enviaram. Em qual passo
+              cada um parou e quanto faltava para concluir.
+            </Typography>
+          </Box>
+          <Chip
+            label={`${abandonedRows.length} ${abandonedRows.length === 1 ? "abandono" : "abandonos"}`}
+            color="warning"
+            variant="outlined"
+            sx={{ fontWeight: 700 }}
+          />
+        </Stack>
+        <Box sx={{ mt: 2 }}>
+          <AbandonedFormsList rows={abandonedRows} />
+        </Box>
+      </Paper>
 
       {/* Referrers */}
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
