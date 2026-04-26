@@ -15,7 +15,7 @@ interface AnalyticsProviderProps {
   children: React.ReactNode;
 }
 
-const HEARTBEAT_MS = 60_000;
+const HEARTBEAT_MS = 15_000;
 
 export default function AnalyticsProvider({
   userId,
@@ -39,26 +39,22 @@ export default function AnalyticsProvider({
     bumpSession({ userId, isAuthenticated });
   }, [pathname, userId, isAuthenticated]);
 
-  // Heartbeat: keep the session "live" for visitors who stay on one page.
-  // Hidden tabs end the session immediately so the live counter reflects who
-  // is actually looking right now; coming back to the tab reopens it.
+  // Heartbeat: keep the session "live" while the tab is visible. We do NOT
+  // end the session on visibilitychange — switching tabs is normal behavior
+  // (e.g. opening the admin in another tab) and shouldn't drop the counter.
+  // The 2-min staleness window in the live query handles inactive tabs.
   useEffect(() => {
-    function beat() {
+    function bump() {
       if (document.visibilityState === "visible") {
         bumpSession({ userId, isAuthenticated });
-      } else {
-        endSession();
       }
     }
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        bumpSession({ userId, isAuthenticated });
-      }
-    }, HEARTBEAT_MS);
-    document.addEventListener("visibilitychange", beat);
+    bump();
+    const id = setInterval(bump, HEARTBEAT_MS);
+    document.addEventListener("visibilitychange", bump);
     return () => {
       clearInterval(id);
-      document.removeEventListener("visibilitychange", beat);
+      document.removeEventListener("visibilitychange", bump);
     };
   }, [userId, isAuthenticated]);
 

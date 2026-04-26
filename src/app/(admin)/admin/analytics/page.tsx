@@ -98,11 +98,11 @@ function deviceLabel(value: string | null): string {
 async function fetchLiveCount(
   supabase: Awaited<ReturnType<typeof createServerClient>>
 ): Promise<number> {
-  const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - 45 * 1000).toISOString();
   const { count } = await supabase
     .from("analytics_sessions")
     .select("id", { count: "exact", head: true })
-    .gte("last_seen_at", twoMinAgo)
+    .gte("last_seen_at", cutoff)
     .is("ended_at", null);
   return count ?? 0;
 }
