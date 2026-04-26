@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import PhoneInput from "@/components/PhoneInput";
 import {
@@ -14,10 +14,15 @@ import {
 } from "@mui/material";
 
 import { register } from "./actions";
+import { trackSignup } from "@/lib/analytics/client";
 
 export default function RegistroForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    trackSignup("start");
+  }, []);
 
   async function handleSubmit(formData: FormData) {
     setError(null);
@@ -25,6 +30,8 @@ export default function RegistroForm() {
       const result = await register(formData);
       if (result?.error) {
         setError(result.error);
+      } else {
+        trackSignup("complete");
       }
     });
   }

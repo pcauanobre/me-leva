@@ -1,7 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import UserShell from "./UserShell";
-import type { Profile } from "@/lib/supabase/types";
+import AnalyticsProvider from "@/components/analytics/AnalyticsProvider";
 
 export default async function UserLayout({
   children,
@@ -33,8 +33,10 @@ export default async function UserLayout({
   const profile = data as { full_name: string } | null;
 
   return (
-    <UserShell userName={profile?.full_name ?? user.email ?? ""}>
-      {children}
-    </UserShell>
+    <AnalyticsProvider userId={user.id} isAuthenticated={true}>
+      <UserShell userName={profile?.full_name ?? user.email ?? ""}>
+        {children}
+      </UserShell>
+    </AnalyticsProvider>
   );
 }

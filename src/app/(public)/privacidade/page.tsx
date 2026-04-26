@@ -145,7 +145,54 @@ export default function PrivacidadePage() {
             </ul>
           </Section>
 
-          <Section title="7. Contato">
+          <Section title="7. Métricas de Uso e Análises">
+            <Typography color="text.secondary" lineHeight={1.8}>
+              Para entender como o site é utilizado e melhorar a experiência de
+              quem busca adotar, coletamos automaticamente, em todas as visitas:
+            </Typography>
+            <ul>
+              <li>
+                <Typography color="text.secondary">
+                  <strong>Identificador de sessão</strong> — gerado no seu
+                  dispositivo e armazenado em <em>localStorage</em>, expira após
+                  30 minutos de inatividade
+                </Typography>
+              </li>
+              <li>
+                <Typography color="text.secondary">
+                  <strong>Endereço IP</strong> — para identificar visitas únicas
+                  e prevenir abuso
+                </Typography>
+              </li>
+              <li>
+                <Typography color="text.secondary">
+                  <strong>Tipo de dispositivo, navegador e sistema operacional</strong>
+                  {" "}— para garantir compatibilidade
+                </Typography>
+              </li>
+              <li>
+                <Typography color="text.secondary">
+                  <strong>Origem do acesso</strong> (referrer e parâmetros UTM)
+                  — para entender de onde vêm os visitantes
+                </Typography>
+              </li>
+              <li>
+                <Typography color="text.secondary">
+                  <strong>Eventos de navegação</strong> — páginas visitadas,
+                  cliques em pets, abertura e progresso no formulário de adoção
+                </Typography>
+              </li>
+            </ul>
+            <Typography color="text.secondary" lineHeight={1.8}>
+              Esses dados são acessíveis apenas pela equipe administrativa da
+              protetora, ficam protegidos por Row Level Security no banco e são
+              automaticamente excluídos após 12 meses. Você pode solicitar a
+              exclusão dos dados associados ao seu IP a qualquer momento entrando
+              em contato.
+            </Typography>
+          </Section>
+
+          <Section title="8. Contato">
             <Typography color="text.secondary" lineHeight={1.8}>
               Para exercer qualquer um dos seus direitos ou em caso de dúvidas
               sobre esta política, entre em contato conosco através do

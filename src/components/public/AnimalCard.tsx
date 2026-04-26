@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -11,6 +13,7 @@ import {
 import PetsIcon from "@mui/icons-material/Pets";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { computeCurrentAge } from "@/lib/utils/computeAge";
+import { trackPetClick } from "@/lib/analytics/client";
 
 const SPECIES_LABELS: Record<string, string> = {
   cachorro: "Cachorro",
@@ -173,6 +176,7 @@ export default function AnimalCard({ animal }: Props) {
   return (
     <Link
       href={`/animais/${animal.slug}`}
+      onClick={() => trackPetClick(animal.id)}
       style={{ textDecoration: "none", display: "block", height: "100%" }}
     >
       {cardContent}

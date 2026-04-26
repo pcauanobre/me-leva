@@ -29,6 +29,8 @@ Plataforma web (responsiva para desktop e mobile) de adocao de animais para uma 
 | Zod | 4.x | Schema validation (client + server) |
 | react-hook-form | 7.x | Form state management |
 | @hookform/resolvers | 5.x | Bridge RHF and Zod |
+| @mui/x-charts | 9.x | Charts (bar, pie) for the admin Analytics dashboard |
+| ua-parser-js | 2.x | Server-side User-Agent parsing for analytics
 
 ### Key Patterns
 
@@ -62,18 +64,33 @@ src/
 │   │       ├── animais/novo/page.tsx # Create animal form
 │   │       ├── animais/[id]/page.tsx # Edit animal + photo upload
 │   │       ├── formularios/page.tsx  # Interest forms viewer
-│   │       └── adocao/              # Adoption forms management
-│   │           ├── page.tsx         # Adoption forms list + filters
-│   │           └── [id]/page.tsx    # Adoption form detail + edit
+│   │       ├── adocao/              # Adoption forms management
+│   │       │   ├── page.tsx         # Adoption forms list + filters
+│   │       │   └── [id]/page.tsx    # Adoption form detail + edit
+│   │       └── analytics/           # Visitor journey analytics
+│   │           ├── page.tsx         # Funnel, KPIs, sessions table, drill-down
+│   │           ├── actions.ts       # deleteAnalyticsSession, purgeAnalyticsOlderThan
+│   │           ├── AnalyticsCharts.tsx   # MUI X chart components (client)
+│   │           ├── DateRangeFilter.tsx
+│   │           ├── LiveSessions.tsx
+│   │           ├── RecentSessionsTable.tsx
+│   │           └── SessionTimelineDialog.tsx
+│   ├── api/
+│   │   └── analytics/
+│   │       ├── event/route.ts       # POST: insert analytics_events
+│   │       ├── session/route.ts     # POST: upsert analytics_sessions
+│   │       └── live/route.ts        # GET: live session count (admin only)
 │   └── login/                        # Login page (outside route groups)
 ├── components/
+│   ├── analytics/
+│   │   └── AnalyticsProvider.tsx     # Mounts in (public) and (user) layouts; tracks page_view + form abandon
 │   └── public/                       # Reusable public components
 │       ├── PublicHeader.tsx
 │       ├── PublicFooter.tsx
 │       ├── AnimalCard.tsx
 │       ├── AnimalFilters.tsx
 │       ├── AnimalGallery.tsx
-│       ├── InterestForm.tsx
+│       ├── InterestForm.tsx          # Dead code (kept for /admin/formularios history)
 │       ├── AdoptionForm.tsx          # Multi-step adoption form wizard
 │       └── AdoptionFormSteps/        # Step sub-components
 │           ├── ContactStep.tsx
@@ -81,10 +98,13 @@ src/
 │           ├── AnimalPreferenceStep.tsx
 │           └── InterviewStep.tsx
 ├── lib/
+│   ├── analytics/
+│   │   ├── client.ts                 # Browser tracking helpers (track, trackPetClick, trackFormStep, ...)
+│   │   └── server.ts                 # parseRequest, upsertSession, insertEvent (uses ua-parser-js)
 │   ├── supabase/
 │   │   ├── server.ts                 # createServerClient (Server Components, Server Actions)
 │   │   ├── client.ts                 # createBrowserClient (Client Components)
-│   │   └── types.ts                  # Animal, InterestFormRow, AdoptionFormRow, Database types
+│   │   └── types.ts                  # Animal, InterestFormRow, AdoptionFormRow, Analytics*, Database types
 │   ├── schemas.ts                    # Zod schemas (animal, interest form, adoption form)
 │   ├── adoptionQuestions.ts          # 63 interview questions + groupings constant
 │   ├── theme.ts                      # MUI theme (purple/pink brand)
@@ -101,6 +121,8 @@ src/
 - **profiles**: id (FK auth.users), full_name, phone, role ('admin'|'user'), created_at, updated_at
 - **adoption_forms**: id, email, whatsapp, full_name, social_media, address, age, marital_status, education_level, profession, animal_species, animal_sex, animal_age, animal_coat, interview_answers (JSONB), animal_id (FK nullable), status ('pendente'|'aprovado'|'rejeitado'), admin_notes, reviewed_at, created_at, updated_at
 - **site_settings**: key (PK), value
+- **analytics_sessions**: id (TEXT PK, client UUIDv4 in localStorage), user_id (FK auth.users nullable), ip_address (INET), user_agent, device_type ('mobile'|'tablet'|'desktop'|'bot'), browser, os, referrer, utm_source, utm_medium, utm_campaign, country, city, is_authenticated, first_seen_at, last_seen_at, ended_at
+- **analytics_events**: id, session_id (FK analytics_sessions), user_id (FK auth.users nullable), event_type (enum), path, animal_id (FK animals nullable), form_step, duration_ms, metadata (JSONB), created_at. Enum values: page_view, pet_click, pet_view_detail, adoption_form_open, adoption_form_step, adoption_form_submit, adoption_form_abandon, account_signup_start, account_signup_complete, login, logout, donation_form_submit, outbound_click, error
 
 ### RLS Policies
 
@@ -108,6 +130,7 @@ src/
 - interest_forms: anon/authenticated INSERT; admin SELECT/DELETE
 - adoption_forms: anon/authenticated INSERT; admin SELECT/UPDATE/DELETE
 - profiles: users read/update own; admin reads all
+- analytics_sessions / analytics_events: anon/authenticated INSERT (sessions also UPDATE for upsert); admin SELECT/DELETE only
 - storage.objects (pet-photos): public read; authenticated upload; admin delete
 - **is_admin()**: security definer function — used everywhere for role checks (bypasses RLS)
 

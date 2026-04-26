@@ -7,7 +7,6 @@ import {
   Container,
   Typography,
   Grid,
-  Chip,
   Stack,
   Paper,
   Divider,
@@ -19,7 +18,6 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import Link from "next/link";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import AnimalGallery from "@/components/public/AnimalGallery";
-import InterestForm from "@/components/public/InterestForm";
 import { computeCurrentAge } from "@/lib/utils/computeAge";
 
 const SPECIES_LABELS: Record<string, string> = {
@@ -199,29 +197,38 @@ export default async function AnimalProfilePage({
               </Box>
             )}
 
-            {/* Interest form + adoption form link - only show for non-adopted */}
+            {/* Adoption CTA - only show for non-adopted */}
             {animal.status !== "adotado" && (
-              <>
-                <Box id="interesse" sx={{ mt: { xs: 2, sm: 3 } }}>
-                  <InterestForm animalId={animal.id} animalName={animal.name} />
-                </Box>
-                <Box sx={{ mt: 2, textAlign: "center" }}>
-                  <Link
-                    href={`/adotar?animal=${animal.id}`}
-                    style={{ textDecoration: "none" }}
+              <Box id="interesse" sx={{ mt: { xs: 2, sm: 3 }, textAlign: "center" }}>
+                <Link
+                  href={`/adotar?animal=${animal.id}`}
+                  style={{ textDecoration: "none" }}
+                >
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    fullWidth
+                    startIcon={<FavoriteIcon />}
+                    sx={{
+                      minHeight: 56,
+                      fontWeight: 700,
+                      fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                      borderRadius: 3,
+                      py: 1.5,
+                    }}
                   >
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      size="large"
-                      fullWidth
-                      sx={{ fontWeight: 600 }}
-                    >
-                      Preencher Formulário Completo de Adoção
-                    </Button>
-                  </Link>
-                </Box>
-              </>
+                    Quero adotar {animal.name}
+                  </Button>
+                </Link>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 1 }}
+                >
+                  Preencha o formulário completo para iniciar o processo de adoção.
+                </Typography>
+              </Box>
             )}
           </Stack>
         </Grid>

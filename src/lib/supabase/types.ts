@@ -104,6 +104,55 @@ export interface DonationRequest {
   updated_at: string;
 }
 
+export type AnalyticsEventType =
+  | "page_view"
+  | "pet_click"
+  | "pet_view_detail"
+  | "adoption_form_open"
+  | "adoption_form_step"
+  | "adoption_form_submit"
+  | "adoption_form_abandon"
+  | "account_signup_start"
+  | "account_signup_complete"
+  | "login"
+  | "logout"
+  | "donation_form_submit"
+  | "outbound_click"
+  | "error";
+
+export interface AnalyticsSession {
+  id: string;
+  user_id: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  device_type: string | null;
+  browser: string | null;
+  os: string | null;
+  referrer: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  country: string | null;
+  city: string | null;
+  is_authenticated: boolean;
+  first_seen_at: string;
+  last_seen_at: string;
+  ended_at: string | null;
+}
+
+export interface AnalyticsEvent {
+  id: string;
+  session_id: string;
+  user_id: string | null;
+  event_type: AnalyticsEventType;
+  path: string | null;
+  animal_id: string | null;
+  form_step: number | null;
+  duration_ms: number | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -137,10 +186,24 @@ export type Database = {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      analytics_sessions: {
+        Row: AnalyticsSession;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      analytics_events: {
+        Row: AnalyticsEvent;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
-    Enums: Record<string, never>;
+    Enums: {
+      analytics_event_type: AnalyticsEventType;
+    };
     CompositeTypes: Record<string, never>;
   };
 };

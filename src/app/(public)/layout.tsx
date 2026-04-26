@@ -1,5 +1,6 @@
 import PublicHeader from "@/components/public/PublicHeader";
 import PublicFooter from "@/components/public/PublicFooter";
+import AnalyticsProvider from "@/components/analytics/AnalyticsProvider";
 import { Box } from "@mui/material";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -32,12 +33,12 @@ export default async function PublicLayout({
   }
 
   return (
-    <>
+    <AnalyticsProvider userId={user?.id ?? null} isAuthenticated={!!user}>
       <PublicHeader user={authUser} />
       <Box component="main" sx={{ flex: 1 }}>
         {children}
       </Box>
       <PublicFooter />
-    </>
+    </AnalyticsProvider>
   );
 }

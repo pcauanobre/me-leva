@@ -22,6 +22,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import Link from "next/link";
 import { login } from "./actions";
 import { sendResetEmail, verifyResetCode, updatePassword } from "./resetActions";
+import { trackLogin } from "@/lib/analytics/client";
 
 export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export default function LoginForm() {
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    trackLogin();
     startTransition(async () => {
       const result = await login(formData);
       if (result?.error) {

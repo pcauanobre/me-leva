@@ -31,6 +31,11 @@ import {
   ALL_QUESTION_KEYS,
 } from "@/lib/adoptionQuestions";
 import { submitAdoptionForm } from "@/app/(public)/adotar/actions";
+import {
+  trackFormOpen,
+  trackFormStep,
+  trackFormSubmit,
+} from "@/lib/analytics/client";
 
 const STEPS = [
   "Dados de Contato",
@@ -112,6 +117,7 @@ export default function AdoptionForm({
     } catch {
       // Ignore parse errors
     }
+    trackFormOpen("adoption");
   }, []);
 
   // Save draft to sessionStorage
@@ -220,7 +226,9 @@ export default function AdoptionForm({
 
   function handleNext() {
     if (validateStep(activeStep)) {
-      setActiveStep((prev) => prev + 1);
+      const nextStep = activeStep + 1;
+      setActiveStep(nextStep);
+      trackFormStep("adoption", nextStep + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
@@ -264,6 +272,7 @@ export default function AdoptionForm({
       } else {
         setSuccess(true);
         sessionStorage.removeItem(STORAGE_KEY);
+        trackFormSubmit("adoption");
       }
     });
   }
