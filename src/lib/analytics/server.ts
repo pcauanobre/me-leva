@@ -87,6 +87,7 @@ export interface SessionUpsertBody {
   utm_campaign?: string | null;
   user_id?: string | null;
   is_authenticated?: boolean;
+  ended?: boolean;
 }
 
 export async function upsertSession(
@@ -96,6 +97,16 @@ export async function upsertSession(
 ): Promise<void> {
   const id = typeof body.id === "string" && body.id.length > 0 ? body.id : null;
   if (!id) return;
+
+  // "ended" pings just close the live session — don't overwrite the rest.
+  if (body.ended) {
+    const nowEnded = new Date().toISOString();
+    await supabase
+      .from("analytics_sessions")
+      .update({ ended_at: nowEnded, last_seen_at: nowEnded })
+      .eq("id", id);
+    return;
+  }
 
   const now = new Date().toISOString();
   const row = {
@@ -112,6 +123,8 @@ export async function upsertSession(
     utm_campaign: body.utm_campaign ?? null,
     is_authenticated: !!body.is_authenticated,
     last_seen_at: now,
+    // Reopening always clears the "ended" mark.
+    ended_at: null,
   };
 
   await supabase

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import {
   bumpSession,
+  endSession,
   trackPageView,
   trackFormAbandonIfOpen,
 } from "@/lib/analytics/client";
@@ -39,13 +40,21 @@ export default function AnalyticsProvider({
   }, [pathname, userId, isAuthenticated]);
 
   // Heartbeat: keep the session "live" for visitors who stay on one page.
+  // Hidden tabs end the session immediately so the live counter reflects who
+  // is actually looking right now; coming back to the tab reopens it.
   useEffect(() => {
     function beat() {
       if (document.visibilityState === "visible") {
         bumpSession({ userId, isAuthenticated });
+      } else {
+        endSession();
       }
     }
-    const id = setInterval(beat, HEARTBEAT_MS);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        bumpSession({ userId, isAuthenticated });
+      }
+    }, HEARTBEAT_MS);
     document.addEventListener("visibilitychange", beat);
     return () => {
       clearInterval(id);
@@ -53,10 +62,11 @@ export default function AnalyticsProvider({
     };
   }, [userId, isAuthenticated]);
 
-  // Abandon detection on tab close / navigation away
+  // Abandon + end-session detection on tab close / navigation away
   useEffect(() => {
     function onLeave() {
       trackFormAbandonIfOpen();
+      endSession();
     }
     window.addEventListener("pagehide", onLeave);
     window.addEventListener("beforeunload", onLeave);

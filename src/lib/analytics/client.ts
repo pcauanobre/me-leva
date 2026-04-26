@@ -87,6 +87,17 @@ export function bumpSession(extras: {
   });
 }
 
+export function endSession(): void {
+  if (!isBrowser()) return;
+  try {
+    const id = localStorage.getItem(SESSION_KEY);
+    if (!id) return;
+    send("/api/analytics/session", { id, ended: true });
+  } catch {
+    // ignore
+  }
+}
+
 export function track(eventType: AnalyticsEventType, payload: TrackPayload = {}): void {
   if (!isBrowser()) return;
   const id = getOrCreateSessionId();
