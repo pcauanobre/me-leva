@@ -151,4 +151,10 @@ export async function insertEvent(
     metadata:
       body.metadata && typeof body.metadata === "object" ? body.metadata : {},
   });
+
+  // Keep the session "alive" for the live-count widget on every event.
+  await supabase
+    .from("analytics_sessions")
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq("id", sessionId);
 }
