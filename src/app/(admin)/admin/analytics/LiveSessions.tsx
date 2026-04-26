@@ -23,7 +23,8 @@ export default function LiveSessions({ initialCount }: Props) {
         // ignore
       }
     }
-    const id = setInterval(tick, 30_000);
+    tick();
+    const id = setInterval(tick, 5_000);
     return () => {
       active = false;
       clearInterval(id);
