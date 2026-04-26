@@ -1,6 +1,18 @@
 import { UAParser } from "ua-parser-js";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { AnalyticsEventType } from "@/lib/supabase/types";
+
+let cachedAdmin: SupabaseClient | null = null;
+export function getAnalyticsAdminClient(): SupabaseClient | null {
+  if (cachedAdmin) return cachedAdmin;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) return null;
+  cachedAdmin = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return cachedAdmin;
+}
 
 const VALID_EVENT_TYPES: ReadonlySet<AnalyticsEventType> = new Set([
   "page_view",

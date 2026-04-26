@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { insertEvent } from "@/lib/analytics/server";
+import { getAnalyticsAdminClient, insertEvent } from "@/lib/analytics/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,12 +12,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    const supabase = await createServerClient();
+    const cookieClient = await createServerClient();
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await cookieClient.auth.getUser();
 
-    await insertEvent(supabase, body, user?.id ?? null);
+    const writer = getAnalyticsAdminClient();
+    if (!writer) return NextResponse.json({ ok: true });
+
+    await insertEvent(writer, body, user?.id ?? null);
   } catch {
     // never block UX on analytics
   }

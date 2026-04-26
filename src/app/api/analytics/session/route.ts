@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { parseRequest, upsertSession } from "@/lib/analytics/server";
+import {
+  getAnalyticsAdminClient,
+  parseRequest,
+  upsertSession,
+} from "@/lib/analytics/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,14 +16,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    const supabase = await createServerClient();
+    // Read auth from the cookie-based client (only to know who the visitor is)
+    const cookieClient = await createServerClient();
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await cookieClient.auth.getUser();
+
+    // Write with the service-role client to bypass RLS — necessary because
+    // anon UPSERT trips Postgres' RLS check on ON CONFLICT.
+    const writer = getAnalyticsAdminClient();
+    if (!writer) return NextResponse.json({ ok: true });
 
     const parsed = parseRequest(req);
     await upsertSession(
-      supabase,
+      writer,
       {
         ...body,
         user_id: user?.id ?? body.user_id ?? null,
