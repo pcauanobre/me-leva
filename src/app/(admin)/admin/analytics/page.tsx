@@ -36,8 +36,10 @@ import RecentSessionsTable, {
   type RecentSession,
 } from "./RecentSessionsTable";
 import AbandonedFormsList, { type AbandonedRow } from "./AbandonedFormsList";
+import SignupAttemptsList, { type SignupAttempt } from "./SignupAttemptsList";
 
 const TOTAL_FORM_STEPS = 4;
+const TOTAL_DONATION_STEPS = 4;
 
 export const metadata: Metadata = {
   title: "Análises",
@@ -341,47 +343,107 @@ export default async function AnalyticsPage({
     }
   }
 
-  // Abandoned forms: sessions that opened the form but did NOT submit
-  const sessionsByOpen = sessionByEventType.get("adoption_form_open") ?? new Set();
-  const sessionsBySubmit =
-    sessionByEventType.get("adoption_form_submit") ?? new Set();
-  const maxStepBySession = new Map<string, number>();
-  const lastFormEventBySession = new Map<string, AnalyticsEvent>();
-  for (const e of eventsInScope) {
-    if (
-      e.event_type === "adoption_form_open" ||
-      e.event_type === "adoption_form_step" ||
-      e.event_type === "adoption_form_abandon"
-    ) {
-      const step =
-        e.event_type === "adoption_form_open"
-          ? 1
-          : e.form_step ?? 1;
-      const prev = maxStepBySession.get(e.session_id) ?? 0;
-      if (step > prev) maxStepBySession.set(e.session_id, step);
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
 
-      const prevEv = lastFormEventBySession.get(e.session_id);
-      if (!prevEv || prevEv.created_at < e.created_at) {
-        lastFormEventBySession.set(e.session_id, e);
+  function buildAbandonRows(
+    openType: string,
+    stepType: string,
+    abandonType: string,
+    submitType: string,
+    totalSteps: number
+  ): AbandonedRow[] {
+    const opens = sessionByEventType.get(openType) ?? new Set();
+    const submits = sessionByEventType.get(submitType) ?? new Set();
+    const maxStepBy = new Map<string, number>();
+    const lastEventBy = new Map<string, AnalyticsEvent>();
+    for (const e of eventsInScope) {
+      if (
+        e.event_type === openType ||
+        e.event_type === stepType ||
+        e.event_type === abandonType
+      ) {
+        const step = e.event_type === openType ? 1 : e.form_step ?? 1;
+        const prev = maxStepBy.get(e.session_id) ?? 0;
+        if (step > prev) maxStepBy.set(e.session_id, step);
+        const prevEv = lastEventBy.get(e.session_id);
+        if (!prevEv || prevEv.created_at < e.created_at) {
+          lastEventBy.set(e.session_id, e);
+        }
       }
     }
+    return Array.from(opens)
+      .filter((sid) => !submits.has(sid))
+      .map((sid) => {
+        const sess = sessionById.get(sid);
+        const lastEv = lastEventBy.get(sid);
+        return {
+          sessionId: sid,
+          ip: sess?.ip_address ?? null,
+          device: sess?.device_type ?? null,
+          browser: sess?.browser ?? null,
+          isAuthenticated: sess?.is_authenticated ?? false,
+          reachedStep: maxStepBy.get(sid) ?? 1,
+          totalSteps,
+          durationMs: lastEv?.duration_ms ?? null,
+          lastSeenAt:
+            sess?.last_seen_at ??
+            lastEv?.created_at ??
+            new Date().toISOString(),
+        };
+      })
+      .sort((a, b) => (a.lastSeenAt < b.lastSeenAt ? 1 : -1))
+      .slice(0, 20);
   }
-  const sessionById = new Map(sessions.map((s) => [s.id, s]));
-  const abandonedRows: AbandonedRow[] = Array.from(sessionsByOpen)
-    .filter((sid) => !sessionsBySubmit.has(sid))
+
+  // Adoption abandons
+  const abandonedRows = buildAbandonRows(
+    "adoption_form_open",
+    "adoption_form_step",
+    "adoption_form_abandon",
+    "adoption_form_submit",
+    TOTAL_FORM_STEPS
+  );
+
+  // Donation abandons
+  const donationAbandonedRows = buildAbandonRows(
+    "donation_form_open",
+    "donation_form_step",
+    "donation_form_abandon",
+    "donation_form_submit",
+    TOTAL_DONATION_STEPS
+  );
+
+  // Donation submits count
+  const donationSubmits =
+    sessionByEventType.get("donation_form_submit")?.size ?? 0;
+  const donationOpens =
+    sessionByEventType.get("donation_form_open")?.size ?? 0;
+  const donationCompletionRate =
+    donationOpens > 0 ? (donationSubmits / donationOpens) * 100 : 0;
+
+  // Signup attempts vs completions
+  const signupStarts =
+    sessionByEventType.get("account_signup_start")?.size ?? 0;
+  const signupCompletes =
+    sessionByEventType.get("account_signup_complete")?.size ?? 0;
+  const signupConversionRate =
+    signupStarts > 0 ? (signupCompletes / signupStarts) * 100 : 0;
+
+  // Sessions that started signup but didn't complete (and didn't abandon explicitly either)
+  const signupStartSet =
+    sessionByEventType.get("account_signup_start") ?? new Set();
+  const signupCompleteSet =
+    sessionByEventType.get("account_signup_complete") ?? new Set();
+  const signupAttemptRows: SignupAttempt[] = Array.from(signupStartSet)
+    .filter((sid) => !signupCompleteSet.has(sid))
     .map((sid) => {
       const sess = sessionById.get(sid);
-      const lastEv = lastFormEventBySession.get(sid);
       return {
         sessionId: sid,
         ip: sess?.ip_address ?? null,
         device: sess?.device_type ?? null,
         browser: sess?.browser ?? null,
-        isAuthenticated: sess?.is_authenticated ?? false,
-        reachedStep: maxStepBySession.get(sid) ?? 1,
-        totalSteps: TOTAL_FORM_STEPS,
-        durationMs: lastEv?.duration_ms ?? null,
-        lastSeenAt: sess?.last_seen_at ?? lastEv?.created_at ?? new Date().toISOString(),
+        lastSeenAt: sess?.last_seen_at ?? new Date().toISOString(),
       };
     })
     .sort((a, b) => (a.lastSeenAt < b.lastSeenAt ? 1 : -1))
@@ -690,7 +752,7 @@ export default async function AnalyticsPage({
         </Grid>
       </Grid>
 
-      {/* Abandoned forms */}
+      {/* Abandoned adoption forms */}
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
         <Stack
           direction="row"
@@ -700,11 +762,11 @@ export default async function AnalyticsPage({
         >
           <Box>
             <Typography variant="h6" fontWeight={700}>
-              Formulários abandonados
+              Adoção — formulários abandonados
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Visitantes que abriram o formulário mas não enviaram. Em qual passo
-              cada um parou e quanto faltava para concluir.
+              Visitantes que abriram o formulário de adoção mas não enviaram.
+              Mostra em qual passo pararam e o tempo gasto.
             </Typography>
           </Box>
           <Chip
@@ -716,6 +778,98 @@ export default async function AnalyticsPage({
         </Stack>
         <Box sx={{ mt: 2 }}>
           <AbandonedFormsList rows={abandonedRows} />
+        </Box>
+      </Paper>
+
+      {/* Donations panel */}
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          justifyContent="space-between"
+          spacing={1.5}
+          sx={{ mb: 1 }}
+        >
+          <Box>
+            <Typography variant="h6" fontWeight={700}>
+              Quero Doar — formulários abandonados
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Visitantes que abriram o formulário de doação mas não enviaram.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Chip
+              label={`${donationOpens} abriu${donationOpens === 1 ? "" : "ram"}`}
+              variant="outlined"
+            />
+            <Chip
+              label={`${donationSubmits} enviou${donationSubmits === 1 ? "" : "ram"}`}
+              color="success"
+              variant="outlined"
+            />
+            <Chip
+              label={`Conversão: ${donationCompletionRate.toFixed(1)}%`}
+              color="primary"
+              variant="outlined"
+              sx={{ fontWeight: 700 }}
+            />
+            <Chip
+              label={`${donationAbandonedRows.length} ${donationAbandonedRows.length === 1 ? "abandono" : "abandonos"}`}
+              color="warning"
+              variant="outlined"
+              sx={{ fontWeight: 700 }}
+            />
+          </Stack>
+        </Stack>
+        <Box sx={{ mt: 2 }}>
+          <AbandonedFormsList rows={donationAbandonedRows} />
+        </Box>
+      </Paper>
+
+      {/* Signups panel */}
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          justifyContent="space-between"
+          spacing={1.5}
+          sx={{ mb: 1 }}
+        >
+          <Box>
+            <Typography variant="h6" fontWeight={700}>
+              Cadastros — tentativas vs concluídos
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Quem abriu a tela de criar conta mas não terminou.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Chip
+              label={`${signupStarts} tentou${signupStarts === 1 ? "" : "(varias vezes)"}`}
+              variant="outlined"
+            />
+            <Chip
+              label={`${signupCompletes} criou conta`}
+              color="success"
+              variant="outlined"
+            />
+            <Chip
+              label={`Conversão: ${signupConversionRate.toFixed(1)}%`}
+              color="primary"
+              variant="outlined"
+              sx={{ fontWeight: 700 }}
+            />
+            <Chip
+              label={`${signupAttemptRows.length} ${signupAttemptRows.length === 1 ? "abandono" : "abandonos"}`}
+              color="warning"
+              variant="outlined"
+              sx={{ fontWeight: 700 }}
+            />
+          </Stack>
+        </Stack>
+        <Box sx={{ mt: 2 }}>
+          <SignupAttemptsList rows={signupAttemptRows} />
         </Box>
       </Paper>
 

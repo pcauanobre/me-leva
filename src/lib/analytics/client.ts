@@ -110,6 +110,28 @@ export function trackPetClick(animalId: string): void {
   track("pet_click", { animalId });
 }
 
+type FormSuffix = "open" | "step" | "submit" | "abandon";
+
+function eventTypeFor(formName: string, suffix: FormSuffix): AnalyticsEventType {
+  if (formName === "donation") {
+    if (suffix === "open") return "donation_form_open";
+    if (suffix === "step") return "donation_form_step";
+    if (suffix === "submit") return "donation_form_submit";
+    return "donation_form_abandon";
+  }
+  if (formName === "signup") {
+    if (suffix === "open") return "account_signup_start";
+    if (suffix === "step") return "account_signup_start";
+    if (suffix === "submit") return "account_signup_complete";
+    return "account_signup_abandon";
+  }
+  // adoption (default)
+  if (suffix === "open") return "adoption_form_open";
+  if (suffix === "step") return "adoption_form_step";
+  if (suffix === "submit") return "adoption_form_submit";
+  return "adoption_form_abandon";
+}
+
 export function trackFormOpen(formName: string): void {
   if (!isBrowser()) return;
   try {
@@ -120,7 +142,7 @@ export function trackFormOpen(formName: string): void {
   } catch {
     // ignore
   }
-  track("adoption_form_open", { metadata: { form: formName } });
+  track(eventTypeFor(formName, "open"), { metadata: { form: formName } });
 }
 
 export function trackFormStep(formName: string, step: number): void {
@@ -130,7 +152,10 @@ export function trackFormStep(formName: string, step: number): void {
   } catch {
     // ignore
   }
-  track("adoption_form_step", { formStep: step, metadata: { form: formName } });
+  track(eventTypeFor(formName, "step"), {
+    formStep: step,
+    metadata: { form: formName },
+  });
 }
 
 export function trackFormSubmit(formName: string, durationMs?: number): void {
@@ -148,7 +173,10 @@ export function trackFormSubmit(formName: string, durationMs?: number): void {
   } catch {
     // ignore
   }
-  track("adoption_form_submit", { durationMs: dur, metadata: { form: formName } });
+  track(eventTypeFor(formName, "submit"), {
+    durationMs: dur,
+    metadata: { form: formName },
+  });
 }
 
 export function trackFormAbandonIfOpen(): void {
@@ -159,7 +187,11 @@ export function trackFormAbandonIfOpen(): void {
     const step = Number(sessionStorage.getItem(FORM_STEP_KEY) ?? 0);
     const formName = sessionStorage.getItem(FORM_NAME_KEY) ?? "adoption";
     const dur = ts ? Date.now() - ts : null;
-    track("adoption_form_abandon", {
+    sessionStorage.removeItem(FORM_OPEN_KEY);
+    sessionStorage.removeItem(FORM_OPEN_TS_KEY);
+    sessionStorage.removeItem(FORM_STEP_KEY);
+    sessionStorage.removeItem(FORM_NAME_KEY);
+    track(eventTypeFor(formName, "abandon"), {
       formStep: step || undefined,
       durationMs: dur ?? undefined,
       metadata: { form: formName },
@@ -170,7 +202,11 @@ export function trackFormAbandonIfOpen(): void {
 }
 
 export function trackSignup(stage: "start" | "complete"): void {
-  track(stage === "start" ? "account_signup_start" : "account_signup_complete");
+  if (stage === "start") {
+    trackFormOpen("signup");
+  } else {
+    trackFormSubmit("signup");
+  }
 }
 
 export function trackLogin(): void {

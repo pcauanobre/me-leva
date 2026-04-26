@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PhoneInput from "@/components/PhoneInput";
 import {
@@ -19,6 +20,7 @@ import { trackSignup } from "@/lib/analytics/client";
 export default function RegistroForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     trackSignup("start");
@@ -30,8 +32,9 @@ export default function RegistroForm() {
       const result = await register(formData);
       if (result?.error) {
         setError(result.error);
-      } else {
+      } else if (result?.success) {
         trackSignup("complete");
+        router.push("/minha-conta");
       }
     });
   }

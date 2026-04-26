@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   Box,
   Button,
@@ -19,11 +19,50 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import Link from "next/link";
 import { submitDonationRequest } from "@/app/(public)/quero-doar/actions";
 import PhoneInput from "@/components/PhoneInput";
+import {
+  trackFormOpen,
+  trackFormStep,
+  trackFormSubmit,
+} from "@/lib/analytics/client";
+
+const FORM_NAME = "donation";
+
+function computeStep(form: HTMLFormElement | null): number {
+  if (!form) return 1;
+  const fd = new FormData(form);
+  const has = (k: string) => !!(fd.get(k)?.toString().trim());
+  let step = 1;
+  if (has("name") && has("email") && has("whatsapp")) step = 2;
+  if (
+    step >= 2 &&
+    has("animal_name") &&
+    has("species") &&
+    has("sex") &&
+    has("description")
+  )
+    step = 3;
+  if (step >= 3 && has("donation_reason") && has("urgency")) step = 4;
+  return step;
+}
 
 export default function DonationRequestForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const lastStepRef = useRef(1);
+
+  useEffect(() => {
+    trackFormOpen(FORM_NAME);
+  }, []);
+
+  function handleProgress() {
+    const step = computeStep(formRef.current);
+    if (step > lastStepRef.current) {
+      lastStepRef.current = step;
+      trackFormStep(FORM_NAME, step);
+    }
+  }
 
   async function handleSubmit(formData: FormData) {
     setError(null);
@@ -33,6 +72,7 @@ export default function DonationRequestForm() {
         setError(result.error);
       } else {
         setSuccess(true);
+        trackFormSubmit(FORM_NAME);
       }
     });
   }
@@ -62,7 +102,13 @@ export default function DonationRequestForm() {
         </Alert>
       )}
 
-      <Box component="form" action={handleSubmit}>
+      <Box
+        component="form"
+        action={handleSubmit}
+        ref={formRef}
+        onBlur={handleProgress}
+        onChange={handleProgress}
+      >
         {/* Honeypot */}
         <input
           name="website"

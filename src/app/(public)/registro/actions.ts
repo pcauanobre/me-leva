@@ -1,7 +1,6 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 
 export async function register(formData: FormData) {
   const fullName = formData.get("full_name") as string;
@@ -70,5 +69,5 @@ export async function register(formData: FormData) {
     }
   }
 
-  redirect("/minha-conta");
+  return { success: true };
 }
