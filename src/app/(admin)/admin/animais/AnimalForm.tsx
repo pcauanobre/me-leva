@@ -32,8 +32,28 @@ export default function AnimalForm({ animal }: Props) {
   const router = useRouter();
   const isEditing = !!animal;
 
+  const initialMonths = animal?.age_months ?? null;
+  const [years, setYears] = useState<string>(
+    initialMonths == null ? "" : String(Math.floor(initialMonths / 12)),
+  );
+  const [monthsOnly, setMonthsOnly] = useState<string>(
+    initialMonths == null ? "" : String(initialMonths % 12),
+  );
+
   async function handleSubmit(formData: FormData) {
     setError(null);
+
+    const y = parseInt(years, 10);
+    const m = parseInt(monthsOnly, 10);
+    const yearsValid = !isNaN(y) && y >= 0;
+    const monthsValid = !isNaN(m) && m >= 0;
+    if (yearsValid || monthsValid) {
+      const total = (yearsValid ? y : 0) * 12 + (monthsValid ? m : 0);
+      formData.set("age_months", String(total));
+    } else {
+      formData.delete("age_months");
+    }
+
     startTransition(async () => {
       const result = isEditing
         ? await updateAnimal(animal.id, formData)
@@ -89,14 +109,31 @@ export default function AnimalForm({ animal }: Props) {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
-              name="age_months"
-              label="Idade (meses)"
-              type="number"
-              defaultValue={animal?.age_months ?? ""}
-              fullWidth
-              slotProps={{ htmlInput: { min: 0 } }}
-            />
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="Anos"
+                type="number"
+                value={years}
+                onChange={(e) => setYears(e.target.value)}
+                fullWidth
+                slotProps={{ htmlInput: { min: 0, max: 30 } }}
+              />
+              <TextField
+                label="Meses"
+                type="number"
+                value={monthsOnly}
+                onChange={(e) => setMonthsOnly(e.target.value)}
+                fullWidth
+                slotProps={{ htmlInput: { min: 0, max: 11 } }}
+              />
+            </Stack>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 0.5, display: "block" }}
+            >
+              Pode preencher só anos, só meses ou ambos.
+            </Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <FormControl fullWidth>

@@ -41,7 +41,7 @@ const NAV_ITEMS = [
   { label: "Solicitações", href: "/admin/solicitacoes", icon: <AssignmentIcon /> },
   { label: "Doações", href: "/admin/doacoes", icon: <FavoriteIcon /> },
   { label: "Formulários", href: "/admin/formularios", icon: <DescriptionIcon /> },
-  { label: "Adoção", href: "/admin/adocao", icon: <VolunteerActivismIcon /> },
+  { label: "Adoções", href: "/admin/adocao", icon: <VolunteerActivismIcon /> },
   { label: "Análises", href: "/admin/analytics", icon: <InsightsIcon /> },
   { label: "Stories", href: "/admin/stories", icon: <PhotoLibraryIcon /> },
 ];

@@ -64,9 +64,13 @@ src/
 │   │       ├── animais/novo/page.tsx # Create animal form
 │   │       ├── animais/[id]/page.tsx # Edit animal + photo upload
 │   │       ├── formularios/page.tsx  # Interest forms viewer
-│   │       ├── adocao/              # Adoption forms management
-│   │       │   ├── page.tsx         # Adoption forms list + filters
-│   │       │   └── [id]/page.tsx    # Adoption form detail + edit
+│   │       ├── adocao/              # Fluxo completo de adoção (Candidatos + Concluídas)
+│   │       │   ├── page.tsx         # Tabs: Candidatos (formulários) + Concluídas (animais adotados)
+│   │       │   ├── actions.ts       # approveAdoptionForm (atômica: form+animal), revertAdoption, ...
+│   │       │   ├── RevertAdoptionButton.tsx  # Reverter adoção (com opção de reabrir formulário)
+│   │       │   └── [id]/            # Detalhe do candidato
+│   │       │       ├── page.tsx     # Server component (carrega form + lista de animais disponíveis)
+│   │       │       └── AdoptionFormDetail.tsx  # Aprovar com Autocomplete de animal / rejeitar / editar
 │   │       └── analytics/           # Visitor journey analytics
 │   │           ├── page.tsx         # Funnel, KPIs, sessions table, drill-down
 │   │           ├── actions.ts       # deleteAnalyticsSession, purgeAnalyticsOlderThan
@@ -144,7 +148,8 @@ src/
 - **Photo storage path**: `animals/{animal_id}/{timestamp}-{random}.{ext}` in `pet-photos` bucket.
 - **Status values**: "disponivel" | "adotado" — adotado stays visible on public site for 3 days (grayed out), then hidden. Always visible in admin.
 - **Adopted grace period**: When status changes to "adotado", `adopted_at` is set. Public queries include adopted animals where `adopted_at > now() - 3 days`.
-- **Dynamic age**: `age_months` is the age at registration time. Display age is computed as `age_months + months_since(created_at)` via `computeCurrentAge()`.
+- **Dynamic age**: `age_months` is the age at registration time. Display age is computed as `age_months + months_since(created_at)` via `computeCurrentAge()`. The admin form (`AnimalForm.tsx`) splits input into two fields (Anos + Meses) and combines them into total months on submit.
+- **Fluxo de adoção**: Aprovar candidato em `/admin/adocao/[id]` é uma operação atômica (`approveAdoptionForm`) que (1) marca o formulário como "aprovado", (2) vincula o `animal_id`, e (3) seta o animal como `status='adotado'` + `adopted_at=now()`. Adoções concluídas aparecem na aba "Concluídas" de `/admin/adocao`. `revertAdoption` desfaz e opcionalmente reabre o formulário.
 - **ConfirmDialog**: Always use `src/components/ConfirmDialog.tsx` for confirmations. Never use native `confirm()`.
 - **Auth role check**: Always use `supabase.rpc("is_admin")` instead of querying profiles table directly (RLS issue).
 - **Profile creation**: Handled by database trigger `handle_new_user()` on `auth.users` INSERT. Pass `full_name` and `phone` via `signUp({ options: { data: {...} } })`. Login has a safety net that creates missing profiles.

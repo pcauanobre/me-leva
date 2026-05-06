@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import {
+  Avatar,
   Box,
   Typography,
   Paper,
@@ -21,10 +22,14 @@ import {
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import InboxIcon from "@mui/icons-material/Inbox";
-import type { AdoptionFormRow } from "@/lib/supabase/types";
+import PetsIcon from "@mui/icons-material/Pets";
+import DescriptionIcon from "@mui/icons-material/Description";
+import type { AdoptionFormRow, Animal } from "@/lib/supabase/types";
+import { computeCurrentAge } from "@/lib/utils/computeAge";
+import RevertAdoptionButton from "./RevertAdoptionButton";
 
 export const metadata: Metadata = {
-  title: "Formulários de Adoção",
+  title: "Adoções",
 };
 
 function formatPhone(phone: string): string {
@@ -33,7 +38,8 @@ function formatPhone(phone: string): string {
   return `55${digits}`;
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -51,16 +57,61 @@ const STATUS_CONFIG = {
 
 const SPECIES_LABELS: Record<string, string> = {
   cao: "Cão",
+  cachorro: "Cachorro",
   gato: "Gato",
+  outro: "Outro",
+};
+
+const SEX_LABELS: Record<string, string> = {
+  macho: "Macho",
+  femea: "Fêmea",
 };
 
 interface AdocaoPageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ tab?: string; status?: string }>;
 }
 
 export default async function AdocaoPage({ searchParams }: AdocaoPageProps) {
   const params = await searchParams;
-  const statusFilter = params.status || "todos";
+  const tab = params.tab === "concluidas" ? "concluidas" : "candidatos";
+
+  return (
+    <Box>
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
+        Adoções
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Gerencie candidatos a adoção e visualize as adoções concluídas com
+        sucesso.
+      </Typography>
+
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={tab} variant="scrollable" scrollButtons="auto">
+          <Tab
+            label="Candidatos"
+            value="candidatos"
+            component={Link}
+            href="/admin/adocao"
+          />
+          <Tab
+            label="Adoções concluídas"
+            value="concluidas"
+            component={Link}
+            href="/admin/adocao?tab=concluidas"
+          />
+        </Tabs>
+      </Paper>
+
+      {tab === "candidatos" ? (
+        <CandidatosTab statusFilter={params.status || "todos"} />
+      ) : (
+        <ConcluidasTab />
+      )}
+    </Box>
+  );
+}
+
+async function CandidatosTab({ statusFilter }: { statusFilter: string }) {
   const supabase = await createServerClient();
 
   let query = supabase
@@ -77,15 +128,12 @@ export default async function AdocaoPage({ searchParams }: AdocaoPageProps) {
 
   return (
     <Box>
-      <Typography variant="h5" fontWeight={700} sx={{ mb: 3 }}>
-        Formulários de Adoção
-      </Typography>
-
       <Paper sx={{ mb: 3 }}>
         <Tabs
           value={statusFilter}
           variant="scrollable"
           scrollButtons="auto"
+          sx={{ minHeight: 40 }}
         >
           <Tab
             label="Todos"
@@ -175,7 +223,11 @@ export default async function AdocaoPage({ searchParams }: AdocaoPageProps) {
                       </TableCell>
                       <TableCell>{formatDate(form.created_at)}</TableCell>
                       <TableCell align="right">
-                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Stack
+                          direction="row"
+                          spacing={0.5}
+                          justifyContent="flex-end"
+                        >
                           <Link href={`/admin/adocao/${form.id}`}>
                             <IconButton size="small" color="primary">
                               <VisibilityIcon fontSize="small" />
@@ -265,6 +317,274 @@ export default async function AdocaoPage({ searchParams }: AdocaoPageProps) {
           </Stack>
         </>
       )}
+    </Box>
+  );
+}
+
+type AdoptedAnimal = Pick<
+  Animal,
+  | "id"
+  | "name"
+  | "slug"
+  | "species"
+  | "sex"
+  | "age_months"
+  | "cover_photo"
+  | "photo_urls"
+  | "adopted_at"
+  | "created_at"
+>;
+
+interface LinkedForm {
+  id: string;
+  full_name: string;
+  email: string;
+  whatsapp: string;
+  animal_id: string;
+}
+
+async function ConcluidasTab() {
+  const supabase = await createServerClient();
+
+  const { data: adopted } = await supabase
+    .from("animals")
+    .select(
+      "id, name, slug, species, sex, age_months, cover_photo, photo_urls, adopted_at, created_at",
+    )
+    .eq("status", "adotado")
+    .order("adopted_at", { ascending: false, nullsFirst: false });
+
+  const adoptedList = (adopted || []) as AdoptedAnimal[];
+  const animalIds = adoptedList.map((a) => a.id);
+
+  let formByAnimal = new Map<string, LinkedForm>();
+  if (animalIds.length > 0) {
+    const { data: linkedForms } = await supabase
+      .from("adoption_forms")
+      .select("id, full_name, email, whatsapp, animal_id")
+      .in("animal_id", animalIds)
+      .eq("status", "aprovado");
+    formByAnimal = new Map(
+      ((linkedForms as LinkedForm[]) || []).map((f) => [f.animal_id, f]),
+    );
+  }
+
+  if (adoptedList.length === 0) {
+    return (
+      <Paper
+        sx={{
+          p: 6,
+          textAlign: "center",
+          border: "1px dashed",
+          borderColor: "divider",
+        }}
+      >
+        <PetsIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
+        <Typography color="text.secondary">
+          Nenhuma adoção concluída ainda.
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Quando você aprovar um candidato e vincular a um animal, ele aparece
+          aqui.
+        </Typography>
+      </Paper>
+    );
+  }
+
+  return (
+    <Box>
+      {/* Desktop Table */}
+      <TableContainer
+        component={Paper}
+        sx={{ display: { xs: "none", md: "block" } }}
+      >
+        <Table sx={{ minWidth: 900 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Animal</TableCell>
+              <TableCell>Idade</TableCell>
+              <TableCell>Adotante</TableCell>
+              <TableCell>Adotado em</TableCell>
+              <TableCell align="right">Ações</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {adoptedList.map((animal) => {
+              const linkedForm = formByAnimal.get(animal.id);
+              const photo = animal.cover_photo || animal.photo_urls?.[0];
+              return (
+                <TableRow key={animal.id} hover>
+                  <TableCell>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      {photo ? (
+                        <Avatar src={photo} sx={{ width: 48, height: 48 }} />
+                      ) : (
+                        <Avatar
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            bgcolor: "primary.light",
+                          }}
+                        >
+                          <PetsIcon />
+                        </Avatar>
+                      )}
+                      <Box>
+                        <Link
+                          href={`/animais/${animal.slug}`}
+                          style={{ textDecoration: "none", color: "inherit" }}
+                        >
+                          <Typography fontWeight={600}>{animal.name}</Typography>
+                        </Link>
+                        <Typography variant="caption" color="text.secondary">
+                          {SPECIES_LABELS[animal.species] || animal.species}{" "}
+                          &middot;{" "}
+                          {SEX_LABELS[animal.sex] || animal.sex}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    {computeCurrentAge(animal.age_months, animal.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    {linkedForm ? (
+                      <Box>
+                        <Typography fontWeight={600}>
+                          {linkedForm.full_name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {linkedForm.email}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Sem formulário vinculado
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>{formatDate(animal.adopted_at)}</TableCell>
+                  <TableCell align="right">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      justifyContent="flex-end"
+                    >
+                      {linkedForm && (
+                        <Link href={`/admin/adocao/${linkedForm.id}`}>
+                          <Button
+                            size="small"
+                            variant="text"
+                            startIcon={<DescriptionIcon />}
+                          >
+                            Formulário
+                          </Button>
+                        </Link>
+                      )}
+                      {linkedForm && (
+                        <IconButton
+                          size="small"
+                          color="success"
+                          component="a"
+                          href={`https://wa.me/${formatPhone(linkedForm.whatsapp)}?text=${encodeURIComponent(`Oi ${linkedForm.full_name}! Tudo bem com ${animal.name}?`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <WhatsAppIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      <RevertAdoptionButton
+                        animalId={animal.id}
+                        animalName={animal.name}
+                        hasLinkedForm={!!linkedForm}
+                      />
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Mobile Cards */}
+      <Stack spacing={2} sx={{ display: { xs: "flex", md: "none" } }}>
+        {adoptedList.map((animal) => {
+          const linkedForm = formByAnimal.get(animal.id);
+          const photo = animal.cover_photo || animal.photo_urls?.[0];
+          return (
+            <Paper key={animal.id} sx={{ p: 2 }}>
+              <Stack direction="row" spacing={2} sx={{ mb: 1.5 }}>
+                {photo ? (
+                  <Avatar src={photo} sx={{ width: 56, height: 56 }} />
+                ) : (
+                  <Avatar
+                    sx={{ width: 56, height: 56, bgcolor: "primary.light" }}
+                  >
+                    <PetsIcon />
+                  </Avatar>
+                )}
+                <Box sx={{ flex: 1 }}>
+                  <Link
+                    href={`/animais/${animal.slug}`}
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    <Typography fontWeight={600}>{animal.name}</Typography>
+                  </Link>
+                  <Typography variant="caption" color="text.secondary">
+                    {SPECIES_LABELS[animal.species] || animal.species}{" "}
+                    &middot; {SEX_LABELS[animal.sex] || animal.sex} &middot;{" "}
+                    {computeCurrentAge(animal.age_months, animal.created_at)}
+                  </Typography>
+                </Box>
+              </Stack>
+
+              <Stack spacing={0.5} sx={{ mb: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Adotante:{" "}
+                  <strong>
+                    {linkedForm?.full_name || "Sem formulário vinculado"}
+                  </strong>
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Adotado em {formatDate(animal.adopted_at)}
+                </Typography>
+              </Stack>
+
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {linkedForm && (
+                  <Link href={`/admin/adocao/${linkedForm.id}`}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<DescriptionIcon />}
+                    >
+                      Ver formulário
+                    </Button>
+                  </Link>
+                )}
+                {linkedForm && (
+                  <IconButton
+                    size="small"
+                    color="success"
+                    component="a"
+                    href={`https://wa.me/${formatPhone(linkedForm.whatsapp)}?text=${encodeURIComponent(`Oi ${linkedForm.full_name}! Tudo bem com ${animal.name}?`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <WhatsAppIcon />
+                  </IconButton>
+                )}
+                <RevertAdoptionButton
+                  animalId={animal.id}
+                  animalName={animal.name}
+                  hasLinkedForm={!!linkedForm}
+                />
+              </Stack>
+            </Paper>
+          );
+        })}
+      </Stack>
     </Box>
   );
 }

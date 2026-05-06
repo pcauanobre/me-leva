@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Autocomplete,
+  Avatar,
   Box,
   Paper,
   Typography,
@@ -11,15 +14,15 @@ import {
   TextField,
   Button,
   Alert,
-  Divider,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Link as MuiLink,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
@@ -28,6 +31,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import BlockIcon from "@mui/icons-material/Block";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import DeleteIcon from "@mui/icons-material/Delete";
+import PetsIcon from "@mui/icons-material/Pets";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
@@ -39,7 +43,9 @@ import {
   updateAdoptionFormStatus,
   updateAdoptionFormData,
   deleteAdoptionForm,
+  approveAdoptionForm,
 } from "../actions";
+import type { AvailableAnimal } from "./page";
 
 const STATUS_CONFIG = {
   pendente: { label: "Pendente", color: "warning" as const },
@@ -57,7 +63,9 @@ const MARITAL_LABELS: Record<string, string> = {
 
 const SPECIES_LABELS: Record<string, string> = {
   cao: "Cão",
+  cachorro: "Cachorro",
   gato: "Gato",
+  outro: "Outro",
 };
 
 const SEX_LABELS: Record<string, string> = {
@@ -86,14 +94,23 @@ function formatPhone(phone: string): string {
 
 interface Props {
   form: AdoptionFormRow;
+  availableAnimals: AvailableAnimal[];
+  linkedAnimal: AvailableAnimal | null;
 }
 
-export default function AdoptionFormDetail({ form }: Props) {
+export default function AdoptionFormDetail({
+  form,
+  availableAnimals,
+  linkedAnimal,
+}: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [selectedAnimal, setSelectedAnimal] = useState<AvailableAnimal | null>(
+    linkedAnimal && linkedAnimal.status === "disponivel" ? linkedAnimal : null,
+  );
 
   // Editable state
   const [editData, setEditData] = useState({
@@ -164,17 +181,26 @@ export default function AdoptionFormDetail({ form }: Props) {
   }
 
   function handleApprove() {
+    if (!selectedAnimal) {
+      setError("Selecione um animal disponível antes de aprovar.");
+      setApproveOpen(false);
+      return;
+    }
+    const animalId = selectedAnimal.id;
     startTransition(async () => {
-      const result = await updateAdoptionFormStatus(
+      const result = await approveAdoptionForm(
         form.id,
-        "aprovado",
-        editData.admin_notes || undefined
+        animalId,
+        editData.admin_notes || undefined,
       );
       if (result.error) setError(result.error);
       else {
-        setSuccessMsg("Formulário aprovado!");
+        setSuccessMsg(
+          `Formulário aprovado! ${selectedAnimal.name} foi marcado(a) como adotado(a).`,
+        );
         router.refresh();
       }
+      setApproveOpen(false);
     });
   }
 
@@ -322,6 +348,55 @@ export default function AdoptionFormDetail({ form }: Props) {
             >
               <DeleteIcon />
             </IconButton>
+          </Stack>
+        </Stack>
+      </Paper>
+
+      {/* Animal vinculado */}
+      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          justifyContent="space-between"
+          spacing={2}
+        >
+          <Stack direction="row" spacing={2} alignItems="center">
+            {linkedAnimal?.cover_photo ? (
+              <Avatar
+                src={linkedAnimal.cover_photo}
+                alt={linkedAnimal.name}
+                sx={{ width: 56, height: 56 }}
+              />
+            ) : (
+              <Avatar sx={{ width: 56, height: 56, bgcolor: "primary.light" }}>
+                <PetsIcon />
+              </Avatar>
+            )}
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Animal vinculado
+              </Typography>
+              {linkedAnimal ? (
+                <Box>
+                  <MuiLink
+                    component={NextLink}
+                    href={`/admin/animais/${linkedAnimal.id}`}
+                    fontWeight={600}
+                    underline="hover"
+                  >
+                    {linkedAnimal.name}
+                  </MuiLink>
+                  <Typography variant="body2" color="text.secondary">
+                    {SPECIES_LABELS[linkedAnimal.species] || linkedAnimal.species}
+                    {linkedAnimal.status === "adotado" && " · adotado"}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Nenhum animal vinculado ainda. Selecione um ao aprovar.
+                </Typography>
+              )}
+            </Box>
           </Stack>
         </Stack>
       </Paper>
@@ -506,16 +581,85 @@ export default function AdoptionFormDetail({ form }: Props) {
         />
       </Paper>
 
-      {/* Confirm Dialogs */}
-      <ConfirmDialog
+      {/* Approve Dialog with Animal Selection */}
+      <Dialog
         open={approveOpen}
-        onCancel={() => setApproveOpen(false)}
-        onConfirm={handleApprove}
-        title="Aprovar formulário"
-        message={`Deseja aprovar o formulário de "${form.full_name}"?`}
-        confirmLabel="Aprovar"
-        confirmColor="success"
-      />
+        onClose={() => setApproveOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          Aprovar candidato
+        </DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            Selecione o animal adotado por <strong>{form.full_name}</strong>.
+            O animal escolhido será marcado como adotado.
+          </Typography>
+          <Autocomplete
+            options={availableAnimals}
+            value={selectedAnimal}
+            onChange={(_, value) => setSelectedAnimal(value)}
+            getOptionLabel={(option) =>
+              `${option.name} (${SPECIES_LABELS[option.species] || option.species})`
+            }
+            isOptionEqualToValue={(opt, val) => opt.id === val.id}
+            renderOption={(props, option) => {
+              const { key, ...rest } = props as React.HTMLAttributes<HTMLLIElement> & { key?: string };
+              return (
+                <Box
+                  component="li"
+                  key={option.id}
+                  {...rest}
+                >
+                  <Stack direction="row" spacing={2} alignItems="center" sx={{ width: "100%" }}>
+                    {option.cover_photo ? (
+                      <Avatar src={option.cover_photo} sx={{ width: 36, height: 36 }} />
+                    ) : (
+                      <Avatar sx={{ width: 36, height: 36, bgcolor: "primary.light" }}>
+                        <PetsIcon fontSize="small" />
+                      </Avatar>
+                    )}
+                    <Box>
+                      <Typography fontWeight={600}>{option.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {SPECIES_LABELS[option.species] || option.species}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Animal adotado"
+                placeholder="Digite o nome do animal..."
+              />
+            )}
+            noOptionsText="Nenhum animal disponível"
+          />
+          {availableAnimals.length === 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Não há animais com status "disponível" no momento. Cadastre ou
+              libere um animal antes de aprovar este formulário.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setApproveOpen(false)} color="inherit">
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleApprove}
+            disabled={!selectedAnimal || isPending}
+          >
+            {isPending ? "Aprovando..." : "Aprovar e marcar adotado"}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <ConfirmDialog
         open={rejectOpen}
         onCancel={() => setRejectOpen(false)}
