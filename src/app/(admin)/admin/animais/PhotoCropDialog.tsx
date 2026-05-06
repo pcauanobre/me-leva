@@ -26,7 +26,8 @@ interface Props {
   onConfirm: (croppedBlob: Blob, originalName: string) => void;
 }
 
-const OUTPUT_SIZE = 1024;
+const OUTPUT_W = 1200;
+const OUTPUT_H = 900; // 4:3
 
 export default function PhotoCropDialog({
   open,
@@ -75,11 +76,13 @@ export default function PhotoCropDialog({
     setImgNatural({ w: img.naturalWidth, h: img.naturalHeight });
   }
 
+  const containerH = containerSize * (3 / 4);
+
   function baseScale() {
     if (!imgNatural || !containerSize) return 1;
     return Math.max(
       containerSize / imgNatural.w,
-      containerSize / imgNatural.h,
+      containerH / imgNatural.h,
     );
   }
 
@@ -88,7 +91,7 @@ export default function PhotoCropDialog({
     const renderedW = imgNatural.w * scale;
     const renderedH = imgNatural.h * scale;
     const maxX = Math.max(0, (renderedW - containerSize) / 2);
-    const maxY = Math.max(0, (renderedH - containerSize) / 2);
+    const maxY = Math.max(0, (renderedH - containerH) / 2);
     return {
       x: Math.min(maxX, Math.max(-maxX, next.x)),
       y: Math.min(maxY, Math.max(-maxY, next.y)),
@@ -144,15 +147,16 @@ export default function PhotoCropDialog({
     const renderedW = imgNatural.w * scale;
     const renderedH = imgNatural.h * scale;
     const left = (containerSize - renderedW) / 2 + offset.x;
-    const top = (containerSize - renderedH) / 2 + offset.y;
+    const top = (containerH - renderedH) / 2 + offset.y;
 
     const sx = (-left) / scale;
     const sy = (-top) / scale;
-    const sSize = containerSize / scale;
+    const sW = containerSize / scale;
+    const sH = containerH / scale;
 
     const canvas = document.createElement("canvas");
-    canvas.width = OUTPUT_SIZE;
-    canvas.height = OUTPUT_SIZE;
+    canvas.width = OUTPUT_W;
+    canvas.height = OUTPUT_H;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -164,17 +168,7 @@ export default function PhotoCropDialog({
       img.onerror = () => reject(new Error("img load failed"));
     });
 
-    ctx.drawImage(
-      img,
-      sx,
-      sy,
-      sSize,
-      sSize,
-      0,
-      0,
-      OUTPUT_SIZE,
-      OUTPUT_SIZE,
-    );
+    ctx.drawImage(img, sx, sy, sW, sH, 0, 0, OUTPUT_W, OUTPUT_H);
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/jpeg", 0.9),
@@ -206,7 +200,7 @@ export default function PhotoCropDialog({
             ref={containerRef}
             sx={{
               width: "100%",
-              aspectRatio: "1 / 1",
+              aspectRatio: "4 / 3",
               bgcolor: "#0a0a0a",
               borderRadius: 2,
               overflow: "hidden",

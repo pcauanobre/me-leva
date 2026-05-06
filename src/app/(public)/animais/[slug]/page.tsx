@@ -19,6 +19,7 @@ import Link from "next/link";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import AnimalGallery from "@/components/public/AnimalGallery";
 import { computeCurrentAge } from "@/lib/utils/computeAge";
+import { displayName } from "@/lib/utils/displayName";
 
 const SPECIES_LABELS: Record<string, string> = {
   cachorro: "Cachorro",
@@ -85,6 +86,9 @@ export default async function AnimalProfilePage({
     notFound();
   }
 
+  const label = displayName(animal.name, animal.sex);
+  const hasName = !!animal.name?.trim();
+
   const details = [
     { label: "Espécie", value: SPECIES_LABELS[animal.species] ?? animal.species },
     { label: "Raça", value: animal.breed || "Não informada" },
@@ -122,7 +126,7 @@ export default async function AnimalProfilePage({
           <FavoriteIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: "#E8618C" }} />
           <Box>
             <Typography fontWeight={800} color="#C93D6A" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-              {animal.name} foi adotado(a)!
+              {label} foi adotado(a)!
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
               Este animal encontrou um lar. Que tal conhecer outros animais disponíveis?
@@ -134,7 +138,7 @@ export default async function AnimalProfilePage({
       <Grid container spacing={{ xs: 2, md: 4 }}>
         {/* Gallery */}
         <Grid size={{ xs: 12, md: 7 }} className="animate-fade-in-up">
-          <AnimalGallery photos={animal.photo_urls ?? []} name={animal.name} />
+          <AnimalGallery photos={animal.photo_urls ?? []} name={label} />
         </Grid>
 
         {/* Info */}
@@ -143,7 +147,7 @@ export default async function AnimalProfilePage({
             <Box>
               <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} spacing={{ xs: 1, sm: 2 }}>
                 <Typography variant="h3" fontWeight={800} sx={{ fontSize: { xs: "1.75rem", sm: "3rem" } }}>
-                  {animal.name}
+                  {label}
                 </Typography>
               </Stack>
             </Box>
@@ -189,7 +193,7 @@ export default async function AnimalProfilePage({
             {animal.description && (
               <Box>
                 <Typography variant="h6" fontWeight={700} gutterBottom sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
-                  Sobre {animal.name}
+                  Sobre {label}
                 </Typography>
                 <Typography color="text.secondary" whiteSpace="pre-line" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                   {animal.description}
@@ -218,7 +222,7 @@ export default async function AnimalProfilePage({
                       py: 1.5,
                     }}
                   >
-                    Quero adotar {animal.name}
+                    Quero adotar{hasName ? ` ${animal.name}` : ""}
                   </Button>
                 </Link>
                 <Typography

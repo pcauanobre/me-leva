@@ -13,6 +13,7 @@ import {
 import PetsIcon from "@mui/icons-material/Pets";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { computeCurrentAge } from "@/lib/utils/computeAge";
+import { displayName } from "@/lib/utils/displayName";
 import { trackPetClick } from "@/lib/analytics/client";
 
 const SPECIES_LABELS: Record<string, string> = {
@@ -33,6 +34,7 @@ interface Props {
     name: string;
     slug: string;
     species: string;
+    sex: string;
     size: string | null;
     status: string;
     cover_photo: string | null;
@@ -45,6 +47,7 @@ interface Props {
 export default function AnimalCard({ animal }: Props) {
   const isAdopted = animal.status === "adotado";
   const ageLabel = computeCurrentAge(animal.age_months, animal.created_at);
+  const label = displayName(animal.name, animal.sex);
 
   const cardContent = (
     <Card
@@ -73,7 +76,7 @@ export default function AnimalCard({ animal }: Props) {
         {animal.cover_photo ? (
           <Image
             src={animal.cover_photo}
-            alt={animal.name}
+            alt={label}
             fill
             style={{
               objectFit: "cover",
@@ -130,7 +133,7 @@ export default function AnimalCard({ animal }: Props) {
           gutterBottom
           sx={{ fontSize: { xs: "0.9rem", sm: "1.25rem" } }}
         >
-          {animal.name}
+          {label}
         </Typography>
         <Stack
           direction="row"

@@ -19,7 +19,7 @@ export default async function HomePage() {
 
   const { data: animals } = await supabase
     .from("animals")
-    .select("id, name, slug, species, size, status, cover_photo, age_months, created_at, adopted_at")
+    .select("id, name, slug, species, sex, size, status, cover_photo, age_months, created_at, adopted_at")
     .or("submission_status.is.null,submission_status.eq.approved")
     .or(`status.neq.adotado,and(status.eq.adotado,adopted_at.gt.${threeDaysAgo})`)
     .order("status", { ascending: true })
