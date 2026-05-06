@@ -25,9 +25,10 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import InboxIcon from "@mui/icons-material/Inbox";
 import PetsIcon from "@mui/icons-material/Pets";
 import DescriptionIcon from "@mui/icons-material/Description";
-import type { AdoptionFormRow, Animal } from "@/lib/supabase/types";
+import type { AdoptionFormRow } from "@/lib/supabase/types";
 import { computeCurrentAge } from "@/lib/utils/computeAge";
 import RevertAdoptionButton from "./RevertAdoptionButton";
+import type { AdoptedAnimal, LinkedForm } from "./types";
 
 function formatPhone(phone: string): string {
   const digits = (phone || "").replace(/\D/g, "");
@@ -71,28 +72,6 @@ const SEX_LABELS: Record<string, string> = {
   macho: "Macho",
   femea: "Fêmea",
 };
-
-export type AdoptedAnimal = Pick<
-  Animal,
-  | "id"
-  | "name"
-  | "slug"
-  | "species"
-  | "sex"
-  | "age_months"
-  | "cover_photo"
-  | "photo_urls"
-  | "adopted_at"
-  | "created_at"
->;
-
-export interface LinkedForm {
-  id: string;
-  full_name: string;
-  email: string;
-  whatsapp: string;
-  animal_id: string;
-}
 
 interface Props {
   tab: "candidatos" | "concluidas";
