@@ -14,12 +14,11 @@ import {
   Chip,
   Stack,
   Button,
-  Tabs,
-  Tab,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import InboxIcon from "@mui/icons-material/Inbox";
 import type { DonationRequest } from "@/lib/supabase/types";
+import DoacoesTabsNav from "./DoacoesTabsNav";
 
 export const metadata: Metadata = {
   title: "Solicitações de Doação",
@@ -85,21 +84,7 @@ export default async function DoacoesPage({ searchParams }: DoacoesPageProps) {
         Tutores que querem encontrar um novo lar para seus animais.
       </Typography>
 
-      <Tabs
-        value={activeStatus}
-        sx={{ mb: 3 }}
-        TabIndicatorProps={{ style: { height: 3 } }}
-      >
-        {tabs.map((tab) => (
-          <Tab
-            key={tab.value}
-            label={tab.label}
-            value={tab.value}
-            component={Link}
-            href={`/admin/doacoes?status=${tab.value}`}
-          />
-        ))}
-      </Tabs>
+      <DoacoesTabsNav value={activeStatus} tabs={tabs} />
 
       {rows.length === 0 ? (
         <Paper sx={{ p: 6, textAlign: "center" }}>
@@ -155,15 +140,18 @@ export default async function DoacoesPage({ searchParams }: DoacoesPageProps) {
                     </TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={1}>
-                        <Button
-                          component={Link}
+                        <Link
                           href={`/admin/doacoes/${row.id}`}
-                          size="small"
-                          startIcon={<VisibilityIcon />}
-                          variant="outlined"
+                          style={{ textDecoration: "none" }}
                         >
-                          Ver
-                        </Button>
+                          <Button
+                            size="small"
+                            startIcon={<VisibilityIcon />}
+                            variant="outlined"
+                          >
+                            Ver
+                          </Button>
+                        </Link>
                       </Stack>
                     </TableCell>
                   </TableRow>
