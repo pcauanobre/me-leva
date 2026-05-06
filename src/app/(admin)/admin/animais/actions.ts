@@ -260,3 +260,64 @@ export async function deletePhoto(animalId: string, photoUrl: string) {
   revalidatePath("/animais");
   return { success: true };
 }
+
+export async function replacePhoto(
+  animalId: string,
+  oldUrl: string,
+  formData: FormData,
+) {
+  const supabase = await createServerClient();
+  const auth = await requireAdmin(supabase);
+  if (auth.error) return { error: auth.error };
+
+  const file = formData.get("photo") as File | null;
+  if (!file) return { error: "Nenhuma foto recebida" };
+
+  const { data: animal } = await supabase
+    .from("animals")
+    .select("photo_urls, cover_photo")
+    .eq("id", animalId)
+    .single();
+
+  const currentPhotos: string[] = animal?.photo_urls ?? [];
+  const idx = currentPhotos.indexOf(oldUrl);
+
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `animals/${animalId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("pet-photos")
+    .upload(path, file, { contentType: file.type, upsert: false });
+
+  if (uploadError) return { error: "Erro no upload: " + uploadError.message };
+
+  const { data: urlData } = supabase.storage
+    .from("pet-photos")
+    .getPublicUrl(path);
+  const newUrl = urlData.publicUrl;
+
+  const oldPath = oldUrl.split("/storage/v1/object/public/pet-photos/")[1];
+  if (oldPath) {
+    await supabase.storage.from("pet-photos").remove([oldPath]);
+  }
+
+  const updatedPhotos =
+    idx >= 0
+      ? currentPhotos.map((u, i) => (i === idx ? newUrl : u))
+      : [...currentPhotos, newUrl];
+
+  const { error } = await supabase
+    .from("animals")
+    .update({
+      photo_urls: updatedPhotos,
+      cover_photo:
+        animal?.cover_photo === oldUrl ? newUrl : animal?.cover_photo,
+    })
+    .eq("id", animalId);
+
+  if (error) return { error: "Erro ao salvar foto: " + error.message };
+
+  revalidatePath(`/admin/animais/${animalId}`);
+  revalidatePath("/animais");
+  return { success: true, urls: updatedPhotos };
+}

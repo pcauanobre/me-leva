@@ -15,8 +15,9 @@ import {
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
 interface PendingFile {
-  file: File;
+  file: File | null;
   url: string;
+  existingUrl: string | null;
 }
 
 interface Props {
@@ -174,7 +175,7 @@ export default function PhotoCropDialog({
       canvas.toBlob(resolve, "image/jpeg", 0.9),
     );
     if (!blob) return;
-    onConfirm(blob, pending.file.name);
+    onConfirm(blob, pending.file?.name ?? "photo.jpg");
   }
 
   const renderedW = imgNatural ? imgNatural.w * scale : 0;

@@ -10,10 +10,12 @@ import {
   Typography,
   Alert,
   Paper,
+  Tooltip,
 } from "@mui/material";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { uploadPhotos, deletePhoto } from "./actions";
+import CropIcon from "@mui/icons-material/Crop";
+import { uploadPhotos, deletePhoto, replacePhoto } from "./actions";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import PhotoCropDialog from "./PhotoCropDialog";
 
@@ -23,8 +25,9 @@ interface Props {
 }
 
 interface PendingFile {
-  file: File;
   url: string;
+  file: File | null;
+  existingUrl: string | null; // set when re-cropping an already-uploaded photo
 }
 
 export default function PhotoUploader({
@@ -40,14 +43,13 @@ export default function PhotoUploader({
 
   useEffect(() => {
     return () => {
-      if (pending) URL.revokeObjectURL(pending.url);
+      if (pending?.file) URL.revokeObjectURL(pending.url);
     };
   }, [pending]);
 
   function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files?.length) return;
-
     const file = files[0];
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setError("Apenas JPG, PNG ou WebP");
@@ -59,39 +61,55 @@ export default function PhotoUploader({
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
-
     setError(null);
     const url = URL.createObjectURL(file);
-    setPending({ file, url });
-
+    setPending({ file, url, existingUrl: null });
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  function handleEditCrop(existingUrl: string) {
+    setError(null);
+    setPending({ file: null, url: existingUrl, existingUrl });
+  }
+
   function handleCropConfirm(blob: Blob, originalName: string) {
-    const ext = originalName.split(".").pop() || "jpg";
+    const ext = "jpg";
     const baseName = originalName.replace(/\.[^/.]+$/, "");
     const cropped = new File([blob], `${baseName}-cropped.${ext}`, {
       type: "image/jpeg",
     });
 
-    const formData = new FormData();
-    formData.append("photos", cropped);
+    const isEdit = !!pending?.existingUrl;
+    const oldUrl = pending?.existingUrl ?? null;
 
-    if (pending) URL.revokeObjectURL(pending.url);
+    if (pending?.file) URL.revokeObjectURL(pending.url);
     setPending(null);
 
     startTransition(async () => {
-      const result = await uploadPhotos(animalId, formData);
-      if (result.error) {
-        setError(result.error);
-      } else if (result.urls) {
-        setPhotos(result.urls);
+      if (isEdit && oldUrl) {
+        const formData = new FormData();
+        formData.append("photo", cropped);
+        const result = await replacePhoto(animalId, oldUrl, formData);
+        if (result.error) {
+          setError(result.error);
+        } else if (result.urls) {
+          setPhotos(result.urls);
+        }
+      } else {
+        const formData = new FormData();
+        formData.append("photos", cropped);
+        const result = await uploadPhotos(animalId, formData);
+        if (result.error) {
+          setError(result.error);
+        } else if (result.urls) {
+          setPhotos(result.urls);
+        }
       }
     });
   }
 
   function handleCropCancel() {
-    if (pending) URL.revokeObjectURL(pending.url);
+    if (pending?.file) URL.revokeObjectURL(pending.url);
     setPending(null);
   }
 
@@ -134,6 +152,7 @@ export default function PhotoUploader({
               overflow: "hidden",
               border: "1px solid",
               borderColor: "divider",
+              "&:hover .photo-actions": { opacity: 1 },
             }}
           >
             <Image
@@ -142,21 +161,47 @@ export default function PhotoUploader({
               fill
               style={{ objectFit: "cover" }}
             />
-            <IconButton
-              size="small"
-              onClick={() => setDeleteUrl(url)}
-              disabled={isPending}
+            <Stack
+              className="photo-actions"
+              direction="row"
+              spacing={0.5}
               sx={{
                 position: "absolute",
                 top: 4,
                 right: 4,
-                bgcolor: "rgba(0,0,0,0.6)",
-                color: "white",
-                "&:hover": { bgcolor: "rgba(0,0,0,0.8)" },
+                opacity: { xs: 1, sm: 0 },
+                transition: "opacity 0.15s",
               }}
             >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+              <Tooltip title="Redimensionar">
+                <IconButton
+                  size="small"
+                  onClick={() => handleEditCrop(url)}
+                  disabled={isPending}
+                  sx={{
+                    bgcolor: "rgba(0,0,0,0.6)",
+                    color: "white",
+                    "&:hover": { bgcolor: "rgba(0,0,0,0.85)" },
+                  }}
+                >
+                  <CropIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Remover">
+                <IconButton
+                  size="small"
+                  onClick={() => setDeleteUrl(url)}
+                  disabled={isPending}
+                  sx={{
+                    bgcolor: "rgba(0,0,0,0.6)",
+                    color: "white",
+                    "&:hover": { bgcolor: "rgba(0,0,0,0.85)" },
+                  }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </Box>
         ))}
       </Stack>
