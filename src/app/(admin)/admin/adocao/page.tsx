@@ -16,8 +16,6 @@ import {
   Stack,
   IconButton,
   Button,
-  Tabs,
-  Tab,
 } from "@mui/material";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -27,6 +25,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import type { AdoptionFormRow, Animal } from "@/lib/supabase/types";
 import { computeCurrentAge } from "@/lib/utils/computeAge";
 import RevertAdoptionButton from "./RevertAdoptionButton";
+import AdocaoTabsNav from "./AdocaoTabsNav";
 
 export const metadata: Metadata = {
   title: "Adoções",
@@ -158,58 +157,41 @@ export default async function AdocaoPage({ searchParams }: AdocaoPageProps) {
         sucesso.
       </Typography>
 
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={tab} variant="scrollable" scrollButtons="auto">
-          <Tab
-            label="Candidatos"
-            value="candidatos"
-            component={Link}
-            href="/admin/adocao"
-          />
-          <Tab
-            label="Adoções concluídas"
-            value="concluidas"
-            component={Link}
-            href="/admin/adocao?tab=concluidas"
-          />
-        </Tabs>
-      </Paper>
+      <AdocaoTabsNav
+        value={tab}
+        tabs={[
+          { value: "candidatos", label: "Candidatos", href: "/admin/adocao" },
+          {
+            value: "concluidas",
+            label: "Adoções concluídas",
+            href: "/admin/adocao?tab=concluidas",
+          },
+        ]}
+      />
 
       {tab === "candidatos" ? (
         <Box>
-          <Paper sx={{ mb: 3 }}>
-            <Tabs
-              value={statusFilter}
-              variant="scrollable"
-              scrollButtons="auto"
-              sx={{ minHeight: 40 }}
-            >
-              <Tab
-                label="Todos"
-                value="todos"
-                component={Link}
-                href="/admin/adocao"
-              />
-              <Tab
-                label="Pendentes"
-                value="pendente"
-                component={Link}
-                href="/admin/adocao?status=pendente"
-              />
-              <Tab
-                label="Aprovados"
-                value="aprovado"
-                component={Link}
-                href="/admin/adocao?status=aprovado"
-              />
-              <Tab
-                label="Rejeitados"
-                value="rejeitado"
-                component={Link}
-                href="/admin/adocao?status=rejeitado"
-              />
-            </Tabs>
-          </Paper>
+          <AdocaoTabsNav
+            value={statusFilter}
+            tabs={[
+              { value: "todos", label: "Todos", href: "/admin/adocao" },
+              {
+                value: "pendente",
+                label: "Pendentes",
+                href: "/admin/adocao?status=pendente",
+              },
+              {
+                value: "aprovado",
+                label: "Aprovados",
+                href: "/admin/adocao?status=aprovado",
+              },
+              {
+                value: "rejeitado",
+                label: "Rejeitados",
+                href: "/admin/adocao?status=rejeitado",
+              },
+            ]}
+          />
 
           {typedForms.length === 0 ? (
             <Paper
