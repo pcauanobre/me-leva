@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   Box,
@@ -15,38 +15,70 @@ import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { uploadPhotos, deletePhoto } from "./actions";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import PhotoCropDialog from "./PhotoCropDialog";
 
 interface Props {
   animalId: string;
   photos: string[];
 }
 
-export default function PhotoUploader({ animalId, photos: initialPhotos }: Props) {
+interface PendingFile {
+  file: File;
+  url: string;
+}
+
+export default function PhotoUploader({
+  animalId,
+  photos: initialPhotos,
+}: Props) {
   const [photos, setPhotos] = useState(initialPhotos);
   const [error, setError] = useState<string | null>(null);
   const [deleteUrl, setDeleteUrl] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingFile | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  useEffect(() => {
+    return () => {
+      if (pending) URL.revokeObjectURL(pending.url);
+    };
+  }, [pending]);
+
+  function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files?.length) return;
 
-    // Validate files
-    for (const file of Array.from(files)) {
-      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-        setError("Apenas JPG, PNG ou WebP");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Cada foto deve ter no maximo 5MB");
-        return;
-      }
+    const file = files[0];
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Apenas JPG, PNG ou WebP");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Cada foto deve ter no máximo 5MB");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
     }
 
     setError(null);
+    const url = URL.createObjectURL(file);
+    setPending({ file, url });
+
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function handleCropConfirm(blob: Blob, originalName: string) {
+    const ext = originalName.split(".").pop() || "jpg";
+    const baseName = originalName.replace(/\.[^/.]+$/, "");
+    const cropped = new File([blob], `${baseName}-cropped.${ext}`, {
+      type: "image/jpeg",
+    });
+
     const formData = new FormData();
-    Array.from(files).forEach((f) => formData.append("photos", f));
+    formData.append("photos", cropped);
+
+    if (pending) URL.revokeObjectURL(pending.url);
+    setPending(null);
 
     startTransition(async () => {
       const result = await uploadPhotos(animalId, formData);
@@ -56,9 +88,11 @@ export default function PhotoUploader({ animalId, photos: initialPhotos }: Props
         setPhotos(result.urls);
       }
     });
+  }
 
-    // Reset input
-    if (fileRef.current) fileRef.current.value = "";
+  function handleCropCancel() {
+    if (pending) URL.revokeObjectURL(pending.url);
+    setPending(null);
   }
 
   function confirmDeletePhoto() {
@@ -133,8 +167,7 @@ export default function PhotoUploader({ animalId, photos: initialPhotos }: Props
             ref={fileRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            multiple
-            onChange={handleUpload}
+            onChange={handleFilePick}
             style={{ display: "none" }}
           />
           <Button
@@ -143,10 +176,18 @@ export default function PhotoUploader({ animalId, photos: initialPhotos }: Props
             onClick={() => fileRef.current?.click()}
             disabled={isPending}
           >
-            {isPending ? "Enviando..." : "Adicionar Fotos"}
+            {isPending ? "Enviando..." : "Adicionar Foto"}
           </Button>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: "block", mt: 1 }}
+          >
+            Após selecionar, ajuste o enquadramento antes de enviar.
+          </Typography>
         </>
       )}
+
       <ConfirmDialog
         open={!!deleteUrl}
         title="Remover foto"
@@ -155,6 +196,13 @@ export default function PhotoUploader({ animalId, photos: initialPhotos }: Props
         confirmColor="error"
         onConfirm={confirmDeletePhoto}
         onCancel={() => setDeleteUrl(null)}
+      />
+
+      <PhotoCropDialog
+        open={!!pending}
+        pending={pending}
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirm}
       />
     </Paper>
   );
